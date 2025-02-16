@@ -16,7 +16,7 @@ def _pad_ld(inp: ndarray, num: int) -> ndarray:
 
 
 # inp = input param = filter
-def conv_ld(inp: ndarray, param: ndarray, jump: int = 1) -> ndarray:
+def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     
     # filling entry data
@@ -56,5 +56,11 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 1) -> ndarray:
     
     return out
 
-x  = conv_ld(input_1d, param_1d)
+
+def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
+
+    out = conv_ld(inp, param)
+    return np.sum(out)
+
+x  = conv_ld_sum(input_1d, param_1d)
 print(x)
