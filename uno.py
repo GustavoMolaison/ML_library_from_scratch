@@ -66,14 +66,20 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
        input_pad = _pad_ld(input_pad, (skipped_iteration + (jump - 1)))
 
     return input_pad
-
+# class indexed_data():
+#         def __init__(self):
+         
 def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int = 0) -> ndarray:
+
     jump_calc = 0
     for o in range(inp.shape[0]):
         for p in range(param.shape[0]):
             inp[o] += param[p] * input_pad[o+p + jump_calc]
             
-        jump_calc += jump    
+        jump_calc += jump   
+
+
+             
       
 
 
@@ -119,24 +125,67 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
         kernels[i] = input_pad[i : param.shape[0] + i]
     return kernels
 
-def deriative_input(inp: ndarray, param: ndarray, input_pad: ndarray) -> ndarray:
+
+
+def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray) -> ndarray:
     
     kernels = get_kernels(param, input_pad)
-    
-    # for kernel in kernels:
+    data_index = {}
+    # Searching for same index in a kernel
+    for kernel in kernels:
+        # chossing one kernel and saving its index
+        kernel_index = np.where(kernels == kernel)[0][0]
+        # np index gets all indexes from array
+        for index in np.ndindex(inp.shape):
+            # we are gonna look for this index in our kernel
+         
+            # checking wether index we look for isnt to big to exist in our kernel
+            if index > (len(kernel) - 1) + kernel_index:
+                print('index to big breaking')
+                break
+            print(f'kernel{np.where(kernels == kernel)[0][0]}')
+            print(f'index{index}')
+            # iterating over every index isnise our current kernel to compare it to input we look
+            for k_value_index in np.ndindex(kernel.shape):
+                print(f'value_kernel{k_value_index}')
+                # that how we calculate if the index and our kernel_value is the same  excact number at the same excact index
+                if k_value_index + kernel_index == index:
+                   print('FOUND ONE')
+                #  And saving indexs of location of our inputs inside out weights matrix
+                   try:
+                        data_index[f'input{index}'] = (data_index[f'input{index}'], (kernel_index, k_value_index))
+                        print('APPENDING')
+                   except KeyError:
+                        data_index[f'input{index}'] = (kernel_index, k_value_index)
+                        print('CREATING')
+    print(data_index)
+    return data_index
 
-    print(kernels)
+    
+   
+            # if index == np.array([i.index() + kernels.index(kernel) for i in kernel ]).any():
+
+    # print(kernels)
 
     # for i in input_pad:
+
+
+def np_index(arr, value):
+    result = np.where(arr == value)[0]  # Get all indexes
+    if result.size > 0:  # Check if the value exists
+        return int(result[0])  # Return first occurrence
+    else:
+        raise ValueError(f"{value} is not in array")
+
 
 input_1d = np.array([1,2,3,4,5])
 param_1d = np.array([1,1,1])
 
-# input, pad_inp = conv_ld(input_1d, param_1d)
-# deriative_input(input, param_1d, pad_inp)
-model = convenctional_model()
-conv_1 = model.conv_layer(inp = input_1d, param = param_1d, jump = 0)
-output, pad_input = model.forward(input_1d, conv_1)
-print(output)
+input, pad_inp = conv_ld(input_1d, param_1d)
+map_input_weight_matrix(input, param_1d, pad_inp)
+# model = convenctional_model()
+# conv_1 = model.conv_layer(inp = input_1d, param = param_1d, jump = 0)
+# output, pad_input = model.forward(input_1d, conv_1)
+# print(output)
 # x  = conv_ld_sum(input_1d, param_1d)
 # print(x)
