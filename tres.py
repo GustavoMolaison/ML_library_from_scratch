@@ -29,15 +29,20 @@ class convulsive_model():
             print(f'self.kernels{self.kernels.shape}')
             print(f'self.kernels_weights{self.kernels_weights.shape}')
 
-    def forward(self, inp: ndarray, conv_layer: conv_layer) -> ndarray:
+    def forward_conv(self, inp: ndarray, conv_layer: conv_layer) -> ndarray:
         output, input_pad = conv_ld(inp, conv_layer.param, conv_layer.jump)
         conv_layer.input_pad = input_pad
         return output, input_pad
     
-    def backward(self, inp: ndarray, conv_layer: conv_layer) -> ndarray:
-        input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad)
-        der = input_deriative(inp, input_index, conv_layer.kernels_weights)
-        return der
+    def output_sum_basic_ver(self, inp: ndarray) -> ndarray:
+        return np.sum(inp)
+    
+    def backward_conv(self, inp: ndarray, conv_layer: conv_layer) -> ndarray:
+        weight_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, map = 'weight')
+        input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, map = 'input')
+        i_der = input_deriative(inp, conv_layer.input_pad, weight_index, conv_layer.kernels_weights)
+        w_der = weight_deriative(inp, conv_layer.input_pad, input_index, conv_layer.kernels_weights)
+        return i_der, w_der
 
 
 
@@ -133,66 +138,70 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
 
 
 
-def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray) -> ndarray:
+def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, map: str) -> ndarray:
     
     kernels = get_kernels(param, input_pad)
     input_index = {}
+    weight_index = {}
     # Searching for same index in a kernel
     for kernel in kernels:
         # chossing one kernel and saving its index
         kernel_index = np.where(kernels == kernel)[0][0]
         # np index gets all indexes from array
-        for index in np.ndindex(inp.shape):
+        for index in np.ndindex(input_pad.shape):
             # we are gonna look for this index in our kernel
-         
             # checking wether index we look for isnt to big to exist in our kernel
             if index > (len(kernel) - 1) + kernel_index:
-                # print('index to big breaking')
                 break
-            # print(f'kernel{np.where(kernels == kernel)[0][0]}')
-            # print(f'index{index}')
             # iterating over every index isnise our current kernel to compare it to input we look
             for k_value_index in np.ndindex(kernel.shape):
-                # print(f'value_kernel{k_value_index}')
                 # that how we calculate if the index and our kernel_value is the same  excact number at the same excact index
                 if k_value_index + kernel_index == index:
-                #    print('FOUND ONE')
                 #  And saving indexs of location of our inputs inside out weights matrix
-                #    print(kernel_index)
-                #    print(k_value_index)
-                #    print([kernel_index, *k_value_index])
-                #    quit()
-                   try:
-                        input_index[f'input{index}'].append([kernel_index, *k_value_index])
-                        # print('APPENDING')
-                   except KeyError:
-                        input_index[f'input{index}'] = [[kernel_index, *k_value_index]]
-                        # print('CREATING')
+                   if map == 'weight':
+                     try:
+                          input_index[f'input{index}'].append([kernel_index, *k_value_index])
+                          # print('APPENDING')
+                     except KeyError:
+                          input_index[f'input{index}'] = [[kernel_index, *k_value_index]]
+                          # print('CREATING')
+                   if map == 'input':
+                     try:
+                          input_index[f'weight{[kernel_index, *k_value_index]}'].append(*index)
+                          # print('APPENDING')
+                     except KeyError:
+                          input_index[f'weight{[kernel_index, *k_value_index]}'] = [*index]
+                          # print('CREATING') 
    
     return input_index
 
-def input_deriative(inp: ndarray, input_index: map_input_weight_matrix, weights: ndarray) -> ndarray:
+def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_weight_matrix, weights: ndarray) -> ndarray:
     
-    input_gradients = np.zeros(inp.shape)
-    for index in np.ndindex(inp.shape):
-        # print(input_index)
-        inputs_indexes = input_index[f'input{index}']
-        print(input_index)
-        quit()
-        # print(f'inputs_inx{inputs_indexes}')
-        inputs_weights = [weights[*i] for i in inputs_indexes]
-        # print(f'{weights}\n')
-        # print(inputs_weights)
-        
+    input_gradients = np.zeros(input_pad.shape)
+    for index in np.ndindex(input_pad.shape):
+ 
+        weights_indexes = weight_index[f'input{index}']
+        # getting weights conntected to input we work with currently
+        inputs_weights = [weights[*i] for i in weights_indexes]
+      
          
         #  here gradient of kernel is one because we are only adding them and its fairly simple
-        gradient = sum(inputs_weights)
-        print(*index)
-        quit()
+        gradient = np.sum(inputs_weights)
         input_gradients[*index] = gradient
 
     return input_gradients
 
+def weight_deriative(inp: ndarray, input_pad: ndarray, input_index: map_input_weight_matrix, weights: ndarray)  -> ndarray:
+
+    weight_gradients = np.zeros(weights.shape)
+    for index in np.ndindex(weights.shape):
+        input_indexes =  input_index[f'weight{[*index]}']
+        
+        weights_inputs = [input_pad[i] for i in input_indexes]
+        gradient = np.sum(weights_inputs)
+        weight_gradients[*index] = gradient
+        
+    return weight_gradients
 
         
 
@@ -215,18 +224,19 @@ def np_index(arr, value):
 
 
 input_1d = np.array([1,2,3,4,5])
-param_1d = np.array([1,1,1])
+param_1d = np.array([2,1,1])
 
 # input, pad_inp = conv_ld(input_1d, param_1d)
-# x = map_input_weight_matrix(input, param_1d, pad_inp)
+# x = map_input_weight_matrix(input, param_1d, pad_inp, map = 'input')
 # print(x)
 # quit()
 
 model = convulsive_model()
 conv_1 = model.conv_layer(inp = input_1d, param = param_1d, jump = 0)
-output, pad_input = model.forward(input_1d, conv_1)
-der = model.backward(output, conv_1)
-print(output)
-print(der)
-# x  = conv_ld_sum(input_1d, param_1d)
-# print(x)
+output, pad_input = model.forward_conv(input_1d, conv_1)
+sum = model.output_sum_basic_ver(output)
+i_der, w_der = model.backward_conv(output, conv_1)
+print(f'output{output}')
+print(f'sum{sum}')
+print(f'input_der{i_der}')
+print(f'weight_der{w_der}')
