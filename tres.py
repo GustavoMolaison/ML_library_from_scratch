@@ -24,6 +24,9 @@ class convulsive_model():
             
             
             self.kernels = get_kernels(param_shape, input_pad_shape)
+            # setting back to 2d cause get kernels returns 3d
+            self.kernels = self.kernels.reshape(self.kernels.shape[0] * self.kernels.shape[1], self.kernels.shape[2])
+         
             # self.kernels_weights = np.random.uniform(0, 1, (self.kernels.shape[0], self.param.shape[0]))
             self.kernels_weights = np.ones((self.kernels.shape[0], self.param.shape[0]))
         def get_info(self):
@@ -156,7 +159,8 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
           kernels_real = kernel  
       else:
           kernels_real = np.concatenate([kernels_real, kernel])
-
+    
+    # 3d array
     return kernels
 
 
@@ -174,62 +178,95 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ma
          
           
        
-         
-          # np index gets all indexes from array
+          #   c=1  
+          # np index gets all indexes from array 
           for index in np.ndindex(row.shape):
+              
               # we are gonna look for this index in our kernel
               # checking wether index we look for isnt to big to exist in our kernel
               if index[0] > (len(kernel) - 1) + inx2:
                   break
               # iterating over every index isnise our current kernel to compare it to input we look
+              
               for k_value_index in np.ndindex(kernel.shape):
                   # that how we calculate if the index and our kernel_value is the same  excact number at the same excact index
                   if k_value_index[0] + inx2 == index[0]:
+                    #  print(f'found{index}')
+                    #  if c % 3 == 0:
+                    #      print('\n')
+                    #  c+= 1
                   #  And saving indexs of location of our inputs inside out weights matrix
                      if map == 'weight':
                        try:
-                            input_index[f'input{index}'].append([inx * kernels.shape[1] + inx2, *k_value_index])
+                            input_index[f'input{inx, index[0]}'].append([inx * kernels.shape[1] + inx2, *k_value_index])
                             # print('APPENDING')
                        except KeyError:
-                            input_index[f'input{index}'] = [[inx * kernels.shape[1] + inx2, *k_value_index]]
+                            input_index[f'input{inx, index[0]}'] = [[inx * kernels.shape[1] + inx2, *k_value_index]]
                             # print('CREATING')
                      if map == 'input':
                        try:
-                            input_index[f'weight{[inx * kernels.shape[1] + inx2, *k_value_index]}'].append(*index)
+                            input_index[f'weight{[inx * kernels.shape[1] + inx2, *k_value_index]}'].append([inx, index[0]])
                             # print('APPENDING')
                        except KeyError:
-                            input_index[f'weight{[inx * kernels.shape[1] + inx2, *k_value_index]}'] = [*index]
+                            input_index[f'weight{[inx * kernels.shape[1] + inx2, *k_value_index]}'] = [[inx, index[0]]]
                             # print('CREATING') 
       
-            
+    
+    
     return input_index
 
 def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_weight_matrix, weights: ndarray) -> ndarray:
     
-    input_gradients = np.zeros(input_pad.shape)
-    for index in np.ndindex(input_pad.shape):
- 
-        weights_indexes = weight_index[f'input{index}']
-        # getting weights conntected to input we work with currently
-        inputs_weights = [weights[*i] for i in weights_indexes]
+    
+    
+    
+    for inx, row in enumerate(input_pad):
+      input_gradients = np.zeros(row.shape)
+      for index in np.ndindex(row.shape):
+          print(weight_index)
+         
+         
+          weights_indexes = weight_index[f'input{inx,  index[0]}']
+          # getting weights conntected to input we work with currently
+          inputs_weights = [weights[*i] for i in weights_indexes]
       
          
-        #  here gradient of kernel is one because we are only adding them and its fairly simple
-        gradient = np.sum(inputs_weights)
-        input_gradients[*index] = gradient
-
-    return input_gradients
+          #  here gradient of kernel is one because we are only adding them and its fairly simple
+          gradient = np.sum(inputs_weights)
+          input_gradients[*index] = gradient
+    
+      if not 'input_gradients_real' in locals():
+          input_gradients_real = input_gradients  
+      else:
+          input_gradients_real = np.stack([input_gradients_real, input_gradients])
+      
+    # quit()
+    return input_gradients_real
 
 def weight_deriative(inp: ndarray, input_pad: ndarray, input_index: map_input_weight_matrix, weights: ndarray)  -> ndarray:
+    for row in input_pad:
+      weight_gradients = np.zeros(weights.shape)
 
-    weight_gradients = np.zeros(weights.shape)
-    for index in np.ndindex(weights.shape):
-        input_indexes =  input_index[f'weight{[*index]}']
-        
-        weights_inputs = [input_pad[i] for i in input_indexes]
-        gradient = np.sum(weights_inputs)
-        weight_gradients[*index] = gradient
-        
+      for index in np.ndindex(weights.shape):
+          print(input_index)
+          print(*index)
+        #   print(input_pad)
+        #   quit()
+          input_indexes =  input_index[f'weight{[*index]}']
+          print(input_pad)
+        #   print(input_pad[input_indexes[0]])
+        #   quit()
+          weights_inputs = [input_pad[i[0], i[1]] for i in input_indexes]
+
+
+          gradient = np.sum(weights_inputs)
+          weight_gradients[*index] = gradient
+      
+      if not 'weight_gradients_real' in locals():
+          weight_gradients_real = weight_gradients  
+      else:
+          weight_gradients_real = np.concatenate([weight_gradients_real, weight_gradients])
+    
     return weight_gradients
 
         
@@ -253,7 +290,7 @@ def np_index(arr, value):
 
 
 input_1d = np.array([[1,2,3,4,5],
-                     [1,2,3,4,5]])
+                     [5,2,3,4,5]])
 # input_1d = np.array([1,2,3,4,5])
 param_1d = np.array([2,1,1])
 
