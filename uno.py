@@ -116,31 +116,95 @@ def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
 def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
     kernels = np.zeros((input_pad.shape[0] - (param.shape[0] - 1), param.shape[0]))
     for i in range(input_pad.shape[0] - (param.shape[0] - 1)):
+        print(input_pad[i : param.shape[0] + i])
         kernels[i] = input_pad[i : param.shape[0] + i]
+    
     return kernels
 
 def deriative_input(inp: ndarray, param: ndarray, input_pad: ndarray, weights: ndarray) -> ndarray:
     
     kernels = get_kernels(param, input_pad)
-    # if jump == 1 this code works
-    for i in inp:
-        for kernel in kernels:
-            pass
+    input_index = {}
+    # Searching for same index in a kernel
+    for inx, kernel in enumerate(kernels):
+        # chossing one kernel and saving its index
+       
+      
+        # np index gets all indexes from array
+        for index in np.ndindex(inp.shape):
+           
+            # we are gonna look for this index in our kernel
+         
+            # checking wether index we look for isnt to big to exist in our kernel
+            if index[0] > (len(kernel) - 1) + inx:
+                # print('index to big breaking')
+                break
+            # print(f'kernel{np.where(kernels == kernel)[0][0]}')
+            # print(f'index{index}')
+            # iterating over every index isnise our current kernel to compare it to input we look
+            for k_value_index in np.ndindex(kernel.shape):
+                # print(f'value_kernel{k_value_index}')
+                # that how we calculate if the index and our kernel_value is the same  excact number at the same excact index
+                if k_value_index[0] + inx == index[0]:
+                   print('FOUND ONE')
+                #  And saving indexs of location of our inputs inside out weights matrix
+                #    print(kernel_index)
+                #    print(k_value_index)
+                #    print([kernel_index, *k_value_index])
+                #    quit()
+                   try:
+                        input_index[f'input{index}'].append([inx, *k_value_index])
+                        print('APPENDING')
+                   except KeyError:
+                        input_index[f'input{index}'] = [[inx, *k_value_index]]
+    
+    print(input_index)                    # print('CREATING')
+    quit()
+    return input_index
+
+def input_deriative(inp: ndarray, input_index: map_input_weight_matrix, weights: ndarray) -> ndarray:
+    
+    input_gradients = np.zeros(inp.shape)
+    for index in np.ndindex(inp.shape):
+        # print(input_index)
+        inputs_indexes = input_index[f'input{index}']
+        print(input_index)
+        quit()
+        # print(f'inputs_inx{inputs_indexes}')
+        inputs_weights = [weights[*i] for i in inputs_indexes]
+        # print(f'{weights}\n')
+        # print(inputs_weights)
+        
+         
+        #  here gradient of kernel is one because we are only adding them and its fairly simple
+        gradient = sum(inputs_weights)
+        print(*index)
+        quit()
+        input_gradients[*index] = gradient
+
+    return input_gradients
+
+
+        
 
 
     
-    # for kernel in kernels:
+   
+            # if index == np.array([i.index() + kernels.index(kernel) for i in kernel ]).any():
 
-    print(kernels)
+    # print(kernels)
 
     # for i in input_pad:
 
 input_1d = np.array([1,2,3,4,5])
 param_1d = np.array([1,1,1])
 
-# input, pad_inp = conv_ld(input_1d, param_1d)
-# deriative_input(input, param_1d, pad_inp)
-model = convenctional_model()
+input, pad_inp = conv_ld(input_1d, param_1d)
+x = map_input_weight_matrix(input, param_1d, pad_inp)
+print(x)
+quit()
+
+model = convulsive_model()
 conv_1 = model.conv_layer(inp = input_1d, param = param_1d, jump = 0)
 output, pad_input = model.forward(input_1d, conv_1)
 print(output)
