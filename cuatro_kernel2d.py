@@ -115,20 +115,41 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     # initilization of entry data
     out_list = []
     input_pad_list = []
-    for row in inp:
-   
-      input_pad = input_pad_calc(row, param, jump)
-      out = np.zeros(row.shape)
-      jump_calc = 0
-      for o in range(out.shape[0]):
-          for p in range(param.shape[0]):
-              out[o] += param[p] * input_pad[o+p + jump_calc]
-            
-          jump_calc += jump  
-    
-      
-      out_list.append(out)
-      input_pad_list.append(input_pad)  
+    for column in inp.T:
+        input_pad = input_pad_calc(column, param, jump)
+        input_pad_list.append(input_pad)
+
+    input_pad_real = np.array(input_pad_list).T
+    input_pad_list = []
+    for row in input_pad_real:
+        input_pad = input_pad_calc(row, param, jump)
+        input_pad_list.append(input_pad)
+
+    input_pad = np.array(input_pad_list)
+
+    # print(param)
+    # quit()
+    out = np.zeros(row.shape)
+    kernel_count = 1
+    out_list = []
+    for column_inx, column in enumerate(input_pad.T):
+      for row_inx, row in enumerate(input_pad):
+        mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
+        for row_mask_inx, row_mask in enumerate(mask):
+            out = np.zeros(row_mask.shape)
+            kernel_count += 1
+            jump_calc = 0
+            kernel = param[kernel_count - 1]
+            # print(row_mask)
+            # quit()
+            for o in range(row_mask.shape[0]):
+                for p in range(kernel.shape[0]):
+                    out[0] = kernel[p] * row_mask[o + p + jump_calc]
+                jump_calc += jump
+            out_list.append(out)
+        
+        
+    #   for kernel_inx, kernel in enumerate(param)
 
     out_real = np.array(out_list)
     input_pad_real = np.array(input_pad_list)
@@ -294,7 +315,9 @@ input_1d = np.array([[1,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5]])
 # input_1d = np.array([1,2,3,4,5])
-param_1d = np.array([2,1,1])
+param_1d = np.array([[2,1,1],
+                     [1,1,1],
+                     [1,1,2]])
 
 # input, pad_inp = conv_ld(input_1d, param_1d)
 # x = map_input_weight_matrix(input, param_1d, pad_inp, map = 'input')
