@@ -113,7 +113,9 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     # initilization of entry data
-    out_list = []
+    # print(param)
+    # quit()
+    
     input_pad_list = []
     for column in inp.T:
         input_pad = input_pad_calc(column, param, jump)
@@ -121,42 +123,72 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
 
     input_pad_real = np.array(input_pad_list).T
     input_pad_list = []
+   
     for row in input_pad_real:
         input_pad = input_pad_calc(row, param, jump)
         input_pad_list.append(input_pad)
 
     input_pad = np.array(input_pad_list)
-
-    # print(param)
-    # quit()
-    out = np.zeros(row.shape)
-    kernel_count = 1
-    out_list = []
+    
+   
+    
+    param_in_row = (input_pad.shape[0] - (param.shape[0] - 1))
+    param_in_columns =  (input_pad.shape[1] - (param.shape[1] - 1))
+    out_array2 = np.zeros((param_in_row * param_in_columns, param.shape[0], param.shape[1]))
+    out_list_computed2 = []
     for column_inx, column in enumerate(input_pad.T):
       for row_inx, row in enumerate(input_pad):
+        kernel_count = 0
         mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
-        for row_mask_inx, row_mask in enumerate(mask):
-            out = np.zeros(row_mask.shape)
-            kernel_count += 1
-            jump_calc = 0
-            kernel = param[kernel_count - 1]
-            # print(row_mask)
-            # quit()
-            for o in range(row_mask.shape[0]):
-                for p in range(kernel.shape[0]):
-                    out[0] = kernel[p] * row_mask[o + p + jump_calc]
-                jump_calc += jump
-            out_list.append(out)
-        
-        
-    #   for kernel_inx, kernel in enumerate(param)
 
-    out_real = np.array(out_list)
-    input_pad_real = np.array(input_pad_list)
-    print(out_real)
-    print(input_pad_real)
+        if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
+            break
+        # if 'out_array' in locals() and 'out_list_computed' in locals():
+        #     out_array2[(row_inx + (param_in_row * column_inx ))] = out_array
+        #     out_list_computed2.append(np.sum(out_list_computed))
+
+        # out_array = np.zeros(param.shape)
+        # out_list_computed = []
+        
+        # print(mask * param)
+        out_array = mask * param
+        out_list_computed = np.sum(out_array)
+
+        out_array2[(row_inx + (param_in_row * column_inx ))] = out_array
+        out_list_computed2.append(out_list_computed)
+        # quit()
+        # for row_mask_inx, row_mask in enumerate(mask):
+        #     out = np.zeros(row_mask.shape)
+        #     jump_calc = 0
+        #     kernel = param[kernel_count]
+        #     kernel_count += 1
+        #     # print(f'{input_pad}\n\n mask')
+        #     # print(f'{mask}\n\n')
+        #     # print(f'{mask}\n\n kernel')
+        #     # print(f'{kernel}\n\n row_mask')
+        #     # print(f'{row_mask}\n\n out')
+        #     # print(f'{out}\n')
+        #     # quit()
+        #     for p in range(kernel.shape[0]):
+        #             out[p] = kernel[p] * row_mask[p + jump_calc]
+            
+        #     jump_calc += jump
+        #     out_array[row_mask_inx] = out
+            
+        #     out_list_computed.append(np.sum(out))
+        
     
-    return out_real, input_pad_real
+
+  
+       
+    # out_array2[(param_in_row - 1) + (param_in_row * (param_in_columns - 1) )] = out_array
+    # out_list_computed2.append(np.sum(out_list_computed))  
+    print(out_array2.shape[0])  
+    print(len(out_list_computed2))
+    quit()
+        
+    
+    return out_list_computed2, input_pad_real, out_array2
 
 
 def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
