@@ -294,7 +294,8 @@ input_1d = np.array([[1,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5]])
 # input_1d = np.array([1,2,3,4,5])
-param_1d = np.array([2,1,1])
+param_1d = np.array([[2,1,1],
+                    [1,1,2]])
 
 # input, pad_inp = conv_ld(input_1d, param_1d)
 # x = map_input_weight_matrix(input, param_1d, pad_inp, map = 'input')
