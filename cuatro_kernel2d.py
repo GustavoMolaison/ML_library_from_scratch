@@ -21,14 +21,20 @@ class convulsive_model():
             param_shape = np.zeros(param.shape)
             # getting data after adding 0
             input_pad_shape = input_pad_calc(inp_shape, param_shape)
+           
+           
             
             
             self.kernels = get_kernels(param_shape, input_pad_shape)
+            
             # setting back to 2d cause get kernels returns 3d
             self.kernels = self.kernels.reshape(self.kernels.shape[0] * self.kernels.shape[1], self.kernels.shape[2])
+            print(self.kernels.shape)
+            quit()
          
             # self.kernels_weights = np.random.uniform(0, 1, (self.kernels.shape[0], self.param.shape[0]))
-            self.kernels_weights = np.ones((self.kernels.shape[0], self.param.shape[0]))
+           
+            self.kernels_weights = np.ones((self.kernels.shape[0], self.param.shape[0] * self.param.shape[1]))
         def get_info(self):
             print(f'self.kernels{self.kernels.shape}')
             print(f'self.kernels_weights{self.kernels_weights.shape}')
@@ -37,7 +43,7 @@ class convulsive_model():
         if inp.ndim != conv_layer.inp.ndim:
             print('___________________________ERROR___________________________ \n Dimension inconsencty, (forward_conv function)')
             quit()
-        output, input_pad = conv_ld(inp, conv_layer.param, conv_layer.jump)
+        output, input_pad, raw_output = conv_ld(inp, conv_layer.param, conv_layer.jump)
         conv_layer.input_pad = input_pad
         if output.ndim != conv_layer.inp.ndim:
             print('___________________________ERROR___________________________ \n Dimension inconsencty2~-input_pad, (forward_conv function)')
@@ -78,18 +84,35 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
      # filling entry data
     param_len = param.shape[0]
     param_mid = param_len // 2
- 
-    
-    input_pad = _pad_ld(inp, param_mid)
-    
-    if not jump == 0:
-       amount_of_param_passes = input_pad.shape[0] - (param_len - 1)
-       confirmed_iteration =  (1 + ((amount_of_param_passes - 1) // (jump + 1)) )
-       skipped_iteration =  amount_of_param_passes - confirmed_iteration
- 
-       input_pad = _pad_ld(input_pad, (skipped_iteration + (jump - 1)))
 
-    return input_pad
+    if inp.ndim == 2:
+        input_pad_list = []
+        for column in inp.T:
+            input_pad = _pad_ld(column, param_mid)
+            input_pad_list.append(input_pad)
+
+        input_pad_real = np.array(input_pad_list).T
+        input_pad_list = []
+
+        for row in input_pad_real:
+            input_pad = _pad_ld(row, param_mid)
+            input_pad_list.append(input_pad)
+        
+        input_pad = np.array(input_pad_list)
+        return input_pad
+
+    if inp.ndim == 1:   
+    
+      input_pad = _pad_ld(inp, param_mid)
+    
+      if not jump == 0:
+         amount_of_param_passes = input_pad.shape[0] - (param_len - 1)
+         confirmed_iteration =  (1 + ((amount_of_param_passes - 1) // (jump + 1)) )
+         skipped_iteration =  amount_of_param_passes - confirmed_iteration
+ 
+         input_pad = _pad_ld(input_pad, (skipped_iteration + (jump - 1)))
+
+      return input_pad
 # class indexed_data():
 #         def __init__(self):
          
@@ -113,8 +136,6 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     # initilization of entry data
-    # print(param)
-    # quit()
     
     input_pad_list = []
     for column in inp.T:
@@ -129,13 +150,16 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
         input_pad_list.append(input_pad)
 
     input_pad = np.array(input_pad_list)
+    # print(input_pad)
+    # quit()
     
    
     
     param_in_row = (input_pad.shape[0] - (param.shape[0] - 1))
     param_in_columns =  (input_pad.shape[1] - (param.shape[1] - 1))
     out_array2 = np.zeros((param_in_row * param_in_columns, param.shape[0], param.shape[1]))
-    out_list_computed2 = []
+    out_array_computed2 = np.zeros(inp.shape)
+    
     for column_inx, column in enumerate(input_pad.T):
       for row_inx, row in enumerate(input_pad):
         kernel_count = 0
@@ -150,12 +174,13 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
         # out_array = np.zeros(param.shape)
         # out_list_computed = []
         
-        # print(mask * param)
+     
         out_array = mask * param
         out_list_computed = np.sum(out_array)
 
+        out_array_computed2[row_inx, column_inx] = np.sum(out_array)
         out_array2[(row_inx + (param_in_row * column_inx ))] = out_array
-        out_list_computed2.append(out_list_computed)
+       
         # quit()
         # for row_mask_inx, row_mask in enumerate(mask):
         #     out = np.zeros(row_mask.shape)
@@ -183,12 +208,13 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
        
     # out_array2[(param_in_row - 1) + (param_in_row * (param_in_columns - 1) )] = out_array
     # out_list_computed2.append(np.sum(out_list_computed))  
-    print(out_array2.shape[0])  
-    print(len(out_list_computed2))
+    print(out_array2)  
+    print((input_pad))
+    print(out_array_computed2)
     quit()
         
     
-    return out_list_computed2, input_pad_real, out_array2
+    return out_array_computed2, input_pad_real, out_array2
 
 
 def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
@@ -214,6 +240,8 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
           kernels_real = np.concatenate([kernels_real, kernel])
     
     # 3d array
+    print(kernels.shape)
+    quit()
     return kernels
 
 
@@ -263,9 +291,14 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ma
                        except KeyError:
                             input_index[f'weight{[inx * kernels.shape[1] + inx2, *k_value_index]}'] = [[inx, index[0]]]
                             # print('CREATING') 
-      
+    if map == 'weight':
+        print(f'{len(input_index)} \n')
+         
     
-    
+    if map == 'input':
+        print(len(input_index))
+        print(input_pad)
+        quit()
     return input_index
 
 def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_weight_matrix, weights: ndarray) -> ndarray:
@@ -276,7 +309,7 @@ def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_we
     for inx, row in enumerate(input_pad):
       input_gradients = np.zeros(row.shape)
       for index in np.ndindex(row.shape):
-          print(weight_index)
+        #   print(weight_index)
          
          
           weights_indexes = weight_index[f'input{inx,  index[0]}']
@@ -301,6 +334,8 @@ def weight_deriative(inp: ndarray, input_pad: ndarray, input_index: map_input_we
       weight_gradients = np.zeros(weights.shape)
 
       for index in np.ndindex(weights.shape):
+          print(input_index)
+        #   quit()
         #   print(input_index)
         #   print(*index)
         #   print(input_pad)
