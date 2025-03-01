@@ -21,20 +21,12 @@ class convulsive_model():
             param_shape = np.zeros(param.shape)
             # getting data after adding 0
             input_pad_shape = input_pad_calc(inp_shape, param_shape)
-           
-           
-            
-            
+
             self.kernels = get_kernels(param_shape, input_pad_shape)
-            
-            # setting back to 2d cause get kernels returns 3d
-            self.kernels = self.kernels.reshape(self.kernels.shape[0] * self.kernels.shape[1], self.kernels.shape[2])
-            print(self.kernels.shape)
-            quit()
-         
+
             # self.kernels_weights = np.random.uniform(0, 1, (self.kernels.shape[0], self.param.shape[0]))
-           
-            self.kernels_weights = np.ones((self.kernels.shape[0], self.param.shape[0] * self.param.shape[1]))
+            self.kernels_weights = np.ones((self.kernels.shape[0] * self.kernels.shape[1], self.kernels.shape[2] * self.kernels.shape[3]))
+        
         def get_info(self):
             print(f'self.kernels{self.kernels.shape}')
             print(f'self.kernels_weights{self.kernels_weights.shape}')
@@ -164,7 +156,7 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
       for row_inx, row in enumerate(input_pad):
         kernel_count = 0
         mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
-
+      
         if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
             break
         # if 'out_array' in locals() and 'out_list_computed' in locals():
@@ -211,7 +203,7 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     print(out_array2)  
     print((input_pad))
     print(out_array_computed2)
-    quit()
+    # quit()
         
     
     return out_array_computed2, input_pad_real, out_array2
@@ -222,26 +214,42 @@ def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
     out, input_pad = conv_ld(inp, param)
     
     return np.sum(out)
-
+# HEERE KERNELS NEED REAPIR YESYESYESYESYES 28.02.2025 28.02.202528.02.202528.02.202528.02.202528.02.202528.02.202528.02.202528.02.202528.02.2025
 def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
+    #  for 2d data it returns 4d data
 
-    input_pad = np.atleast_2d(input_pad)
-    kernels = np.zeros((input_pad.shape[0], input_pad.shape[1] - (param.shape[0] - 1), param.shape[0]))
-    for inx, row in enumerate(input_pad):
-      kernel = np.zeros((row.shape[0] - (param.shape[0] - 1), param.shape[0]))
+    # input_pad = np.atleast_2d(input_pad)
+    # kernels = np.zeros((input_pad.shape[0], input_pad.shape[1] - (param.shape[0] - 1), param.shape[0]))
+    # for inx, row in enumerate(input_pad):
+    #   kernel = np.zeros((row.shape[0] - (param.shape[0] - 1), param.shape[0]))
       
-      for i in range(row.shape[0] - (param.shape[0] - 1)):
-          kernel[i] = row[i : param.shape[0] + i]
+    #   for i in range(row.shape[0] - (param.shape[0] - 1)):
+    #       kernel[i] = row[i : param.shape[0] + i]
     
-      kernels[inx] = kernel 
-      if not 'kernels_real' in locals():
-          kernels_real = kernel  
-      else:
-          kernels_real = np.concatenate([kernels_real, kernel])
+    #   kernels[inx] = kernel 
+    #   if not 'kernels_real' in locals():
+    #       kernels_real = kernel  
+    #   else:
+    #       kernels_real = np.concatenate([kernels_real, kernel])
     
-    # 3d array
-    print(kernels.shape)
-    quit()
+    # # 3d array
+    # Calculating size of unpadded input data (input_pad.shape[0] - (param.shape[0] - 1), input_pad.shape[1] - (param.shape[1] - 1))
+    kernels =np.zeros((input_pad.shape[0] - (param.shape[0] - 1), input_pad.shape[1] - (param.shape[1] - 1), param.shape[0], param.shape[1]))
+    # quit()
+    for column_inx, column in enumerate(input_pad.T):
+      for row_inx, row in enumerate(input_pad):
+        mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
+        if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
+            break
+        
+        
+        # quit()
+        kernels[row_inx, column_inx] = mask
+        
+        
+
+    # quit()
+    
     return kernels
 
 
@@ -249,6 +257,8 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
 def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, map: str) -> ndarray:
      
     kernels = get_kernels(param, input_pad)
+    # turning kernels back to 2d
+    kernels = kernels.reshape(((kernels.shape[0] * kernels.shape[1], kernels.shape[2] * kernels.shape[3])))
     input_index = {}
     weight_index = {}
     # Searching for same index in a kernel
@@ -265,7 +275,7 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ma
               
               # we are gonna look for this index in our kernel
               # checking wether index we look for isnt to big to exist in our kernel
-              if index[0] > (len(kernel) - 1) + inx2:
+              if index[0] > (kernel.shape[0] - 1) + inx2:
                   break
               # iterating over every index isnise our current kernel to compare it to input we look
               
