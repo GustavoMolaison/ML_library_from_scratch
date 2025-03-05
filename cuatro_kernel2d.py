@@ -22,6 +22,7 @@ class convulsive_model():
             # getting data after adding 0
             input_pad_shape = input_pad_calc(inp_shape, param_shape)
             
+            
             self.kernels = get_kernels(param_shape, input_pad_shape)
 
             # self.kernels_weights = np.random.uniform(0, 1, (self.kernels.shape[0], self.param.shape[0]))
@@ -37,6 +38,8 @@ class convulsive_model():
             quit()
         output, input_pad, raw_output = conv_ld(inp, conv_layer.param, conv_layer.jump)
         conv_layer.input_pad = input_pad
+        conv_layer.kernels = get_kernels(conv_layer.param, input_pad)
+    
         if output.ndim != conv_layer.inp.ndim:
             print('___________________________ERROR___________________________ \n Dimension inconsencty2~-input_pad, (forward_conv function)')
             quit()
@@ -49,8 +52,8 @@ class convulsive_model():
         if inp.ndim != conv_layer.inp.ndim:
             print('___________________________ERROR___________________________ \n Dimension inconsencty, (Backward_conv function)')
             quit()
-        weight_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, map = 'weight')
-        input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, map = 'input')
+        weight_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, map = 'weight')
+        input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels,  map = 'input')
         i_der = input_deriative(inp, conv_layer.input_pad, weight_index, conv_layer.kernels_weights)
         w_der = weight_deriative(inp, conv_layer.input_pad, input_index, conv_layer.kernels_weights)
         return i_der, w_der
@@ -243,9 +246,9 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
 # CURRENTLY GET KERNELS GIVES 2D ARRAY WHERE SHAPE[0] ARE ROWS OF DATA IDK IF I WONT THAT OR SIMPLE 1D FOR KERNEL BUT WE WILL SE I GUEES
 # HEREHREHREHRE 1.03.2024
 # PROBLEM 05.03.2025 JAK SZUKAC KTORE IMPUTY Z KTORYMI WAGAMI SA POWIAZANE W 2 WYMIAROWYM INPUCIE WKONCU UZYWAMY MASKI A NIE ZWYKLEJ ITERACJI
-def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, map: str) -> ndarray:
+def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, kernels: ndarray, map: str) -> ndarray:
      
-    kernels = get_kernels(param, input_pad)
+    
     # turning kernels back to 2d
     print(kernels)
     kernels = kernels.reshape(((kernels.shape[0] * kernels.shape[1], kernels.shape[2] * kernels.shape[3])))
@@ -254,54 +257,63 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ma
     # Searching for same index in a kernel
     print(input_pad)
     print(kernels)
-    for inx, row in enumerate(input_pad):
+    
+
+    for column_inx, column in enumerate(input_pad.T):
+      for row_inx, row in enumerate(input_pad):
+        mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
+        print(mask)
+        quit()
+                        #    OLD VERSION 
+    # ///////////////////////////////////////////////////////////////////////////////
+    # for inx, row in enumerate(input_pad):
       
     
-      for inx2, kernel in enumerate(kernels[inx]):
-          print("Iteration!")
-          print(kernel)
-          quit
+    #   for inx2, kernel in enumerate(kernels[inx]):
+    #       print("Iteration!")
+    #       print(kernel)
+    #       quit
        
-          #   c=1  
-          # np index gets all indexes from array 
-          for index in np.ndindex(row.shape):
+    #       #   c=1  
+    #       # np index gets all indexes from array 
+    #       for index in np.ndindex(row.shape):
               
-              # we are gonna look for this index in our kernel
-              # checking wether index we look for isnt to big to exist in our kernel
-              if index[0] > (kernel.shape[0] - 1) + inx2:
-                  break
-              # iterating over every index isnise our current kernel to compare it to input we look
+    #           # we are gonna look for this index in our kernel
+    #           # checking wether index we look for isnt to big to exist in our kernel
+    #           if index[0] > (kernel.shape[0] - 1) + inx2:
+    #               break
+    #           # iterating over every index isnise our current kernel to compare it to input we look
               
-              for k_value_index in np.ndindex(kernel.shape):
-                  # that how we calculate if the index and our kernel_value is the same  excact number at the same excact index
-                  if k_value_index[0] + inx2 == index[0]:
-                    #  print(f'found{index}')
-                    #  if c % 3 == 0:
-                    #      print('\n')
-                    #  c+= 1
-                  #  And saving indexs of location of our inputs inside out weights matrix
-                     if map == 'weight':
-                       try:
-                            input_index[f'input{inx, index[0]}'].append([inx * kernels.shape[1] + inx2, *k_value_index])
-                            # print('APPENDING')
-                       except KeyError:
-                            input_index[f'input{inx, index[0]}'] = [[inx * kernels.shape[1] + inx2, *k_value_index]]
-                            # print('CREATING')
-                     if map == 'input':
-                       try:
-                            input_index[f'weight{[inx * kernels.shape[1] + inx2, *k_value_index]}'].append([inx, index[0]])
-                            # print('APPENDING')
-                       except KeyError:
-                            input_index[f'weight{[inx * kernels.shape[1] + inx2, *k_value_index]}'] = [[inx, index[0]]]
-                            # print('CREATING') 
-    if map == 'weight':
-        print(f'{len(input_index)} \n')
+    #           for k_value_index in np.ndindex(kernel.shape):
+    #               # that how we calculate if the index and our kernel_value is the same  excact number at the same excact index
+    #               if k_value_index[0] + inx2 == index[0]:
+    #                 #  print(f'found{index}')
+    #                 #  if c % 3 == 0:
+    #                 #      print('\n')
+    #                 #  c+= 1
+    #               #  And saving indexs of location of our inputs inside out weights matrix
+    #                  if map == 'weight':
+    #                    try:
+    #                         input_index[f'input{inx, index[0]}'].append([inx * kernels.shape[1] + inx2, *k_value_index])
+    #                         # print('APPENDING')
+    #                    except KeyError:
+    #                         input_index[f'input{inx, index[0]}'] = [[inx * kernels.shape[1] + inx2, *k_value_index]]
+    #                         # print('CREATING')
+    #                  if map == 'input':
+    #                    try:
+    #                         input_index[f'weight{[inx * kernels.shape[1] + inx2, *k_value_index]}'].append([inx, index[0]])
+    #                         # print('APPENDING')
+    #                    except KeyError:
+    #                         input_index[f'weight{[inx * kernels.shape[1] + inx2, *k_value_index]}'] = [[inx, index[0]]]
+    #                         # print('CREATING') 
+    # if map == 'weight':
+    #     print(f'{len(input_index)} \n')
          
     
-    if map == 'input':
-        print(len(input_index))
-        print(input_pad)
-        quit()
+    # if map == 'input':
+    #     print(len(input_index))
+    #     print(input_pad)
+    #     quit()
     
     return input_index
 
