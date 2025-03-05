@@ -21,7 +21,7 @@ class convulsive_model():
             param_shape = np.zeros(param.shape)
             # getting data after adding 0
             input_pad_shape = input_pad_calc(inp_shape, param_shape)
-
+            
             self.kernels = get_kernels(param_shape, input_pad_shape)
 
             # self.kernels_weights = np.random.uniform(0, 1, (self.kernels.shape[0], self.param.shape[0]))
@@ -129,21 +129,8 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     # initilization of entry data
     
-    input_pad_list = []
-    for column in inp.T:
-        input_pad = input_pad_calc(column, param, jump)
-        input_pad_list.append(input_pad)
-
-    input_pad_real = np.array(input_pad_list).T
-    input_pad_list = []
-   
-    for row in input_pad_real:
-        input_pad = input_pad_calc(row, param, jump)
-        input_pad_list.append(input_pad)
-
-    input_pad = np.array(input_pad_list)
-    # print(input_pad)
-    # quit()
+    input_pad  = input_pad_calc(inp, param)
+    
     
    
     
@@ -200,13 +187,13 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
        
     # out_array2[(param_in_row - 1) + (param_in_row * (param_in_columns - 1) )] = out_array
     # out_list_computed2.append(np.sum(out_list_computed))  
-    print(out_array2)  
-    print((input_pad))
-    print(out_array_computed2)
+    # print(out_array2)  
+    # print((input_pad))
+    # print(out_array_computed2)
     # quit()
         
     
-    return out_array_computed2, input_pad_real, out_array2
+    return out_array_computed2, input_pad, out_array2
 
 
 def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
@@ -254,20 +241,26 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
 
 
 # CURRENTLY GET KERNELS GIVES 2D ARRAY WHERE SHAPE[0] ARE ROWS OF DATA IDK IF I WONT THAT OR SIMPLE 1D FOR KERNEL BUT WE WILL SE I GUEES
+# HEREHREHREHRE 1.03.2024
+# PROBLEM 05.03.2025 JAK SZUKAC KTORE IMPUTY Z KTORYMI WAGAMI SA POWIAZANE W 2 WYMIAROWYM INPUCIE WKONCU UZYWAMY MASKI A NIE ZWYKLEJ ITERACJI
 def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, map: str) -> ndarray:
      
     kernels = get_kernels(param, input_pad)
     # turning kernels back to 2d
+    print(kernels)
     kernels = kernels.reshape(((kernels.shape[0] * kernels.shape[1], kernels.shape[2] * kernels.shape[3])))
     input_index = {}
     weight_index = {}
     # Searching for same index in a kernel
+    print(input_pad)
+    print(kernels)
     for inx, row in enumerate(input_pad):
       
     
       for inx2, kernel in enumerate(kernels[inx]):
-         
-          
+          print("Iteration!")
+          print(kernel)
+          quit
        
           #   c=1  
           # np index gets all indexes from array 
@@ -309,6 +302,7 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ma
         print(len(input_index))
         print(input_pad)
         quit()
+    
     return input_index
 
 def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_weight_matrix, weights: ndarray) -> ndarray:
