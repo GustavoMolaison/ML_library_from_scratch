@@ -27,6 +27,8 @@ class convulsive_model():
 
             # self.kernels_weights = np.random.uniform(0, 1, (self.kernels.shape[0], self.param.shape[0]))
             self.kernels_weights = np.ones((self.kernels.shape[0] * self.kernels.shape[1], self.kernels.shape[2] * self.kernels.shape[3]))
+            print(self.kernels_weights.shape)
+            
         
         def get_info(self):
             print(f'self.kernels{self.kernels.shape}')
@@ -52,8 +54,8 @@ class convulsive_model():
         if inp.ndim != conv_layer.inp.ndim:
             print('___________________________ERROR___________________________ \n Dimension inconsencty, (Backward_conv function)')
             quit()
-        weight_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, map = 'weight')
-        input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels,  map = 'input')
+        weight_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, conv_layer.kernels_weights, map = 'weight')
+        input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, conv_layer.kernels_weights,  map = 'input')
         i_der = input_deriative(inp, conv_layer.input_pad, weight_index, conv_layer.kernels_weights)
         w_der = weight_deriative(inp, conv_layer.input_pad, input_index, conv_layer.kernels_weights)
         return i_der, w_der
@@ -246,25 +248,63 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
 # CURRENTLY GET KERNELS GIVES 2D ARRAY WHERE SHAPE[0] ARE ROWS OF DATA IDK IF I WONT THAT OR SIMPLE 1D FOR KERNEL BUT WE WILL SE I GUEES
 # HEREHREHREHRE 1.03.2024
 # PROBLEM 05.03.2025 JAK SZUKAC KTORE IMPUTY Z KTORYMI WAGAMI SA POWIAZANE W 2 WYMIAROWYM INPUCIE WKONCU UZYWAMY MASKI A NIE ZWYKLEJ ITERACJI
-def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, kernels: ndarray, map: str) -> ndarray:
+def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, kernels: ndarray, weights: ndarray, map: str) -> ndarray:
      
     
     # turning kernels back to 2d
     print(kernels)
-    kernels = kernels.reshape(((kernels.shape[0] * kernels.shape[1], kernels.shape[2] * kernels.shape[3])))
+    # kernels = kernels.reshape(((kernels.shape[0] * kernels.shape[1], kernels.shape[2] * kernels.shape[3])))
     input_index = {}
     weight_index = {}
     # Searching for same index in a kernel
     print(input_pad)
-    print(kernels)
-    
-
+    print(kernels[0][0])
+    print(kernels.shape)
+    weights_map = {}
+    ouuuut = 0
     for column_inx, column in enumerate(input_pad.T):
+      print('BREAKKK')
       for row_inx, row in enumerate(input_pad):
-        mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
-        print(mask)
-        quit()
-                        #    OLD VERSION 
+          mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
+          if mask.size != param.size:
+             break
+          print(mask)
+        #   print(kernels_column)
+        #   print(mask)
+        #   print(input_pad)
+        #   quit()
+          for row_mask_inx, row_mask in enumerate(mask):
+            # print(row_mask)   
+            
+            for column_mask_inx, column_mask in enumerate(row_mask):
+               ouuuut += 1
+            #    print(i)
+               
+               print((row_mask_inx + row_inx), (column_mask_inx + column_inx))
+               print(f'mask.size: {mask.size}')
+               print(f'column_mask_inx: {column_mask_inx}')
+               print(f'row_mask_inx: {row_mask_inx}')
+               print(f'column_inx: {column_inx}')
+               print(f'row_inx: {row_inx}')
+               print(f'column.shape: {column.shape[0]}')
+               print(f'mask.shape[0]: {mask.shape[0]}')
+               print(f'row_mask.size: {row_mask.size}')
+            #    IT SEEMS TO WORK FOR THE FRIST COLUMN_INX ITERATION ON SECOND NO THO
+               try:
+                 weights_map[f'input_index: {[row_mask_inx + row_inx, column_mask_inx + column_inx]}'].append(
+                 ((column_mask_inx + 1) + row_mask.size * row_mask_inx) + mask.size * (column_inx * (column.shape[0] - (mask.shape[0] - 1))) + (row_inx * mask.size) )
+               except KeyError:
+                 weights_map[f'input_index: {[row_mask_inx + row_inx, column_mask_inx + column_inx]}'] = [(
+                 ((column_mask_inx + 1) + row_mask.size * row_mask_inx) + mask.size * (column_inx * (column.shape[0] - (mask.shape[0] - 1))) + (row_inx * mask.size) )]
+               print(weights_map)
+               print('////////////////////////////////////////////////////////////////\n')
+              
+            #    quit()
+
+                    # Wzór na sprawdzanie czy indexy sie zgadzaja
+            #    if row_mask_inx + row_inx == row of input and columnx_mask_inx + column_inx == column of input
+            #    quit()
+                         #    OLD VERSION 
     # ///////////////////////////////////////////////////////////////////////////////
     # for inx, row in enumerate(input_pad):
       
