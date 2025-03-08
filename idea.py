@@ -1,6 +1,6 @@
 import numpy as np
 
-d = {'dog' : 1}
+d = {'dog' : 1, 'cat': 2}
 w = {'cat': 2}
-d.append(w)
-print(d)
+
+print(d.items())
