@@ -126,9 +126,10 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
         input_pad_list.append(input_pad)
 
     input_pad = np.array(input_pad_list)
+    print(input_pad)
 
     # print(param)
-    # quit()
+    quit()
     out = np.zeros(row.shape)
     kernel_count = 1
     out_list = []
