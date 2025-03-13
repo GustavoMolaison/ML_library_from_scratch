@@ -252,13 +252,13 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
      
     
     # turning kernels back to 2d
-    print(kernels)
+    # print(kernels)
     # kernels = kernels.reshape(((kernels.shape[0] * kernels.shape[1], kernels.shape[2] * kernels.shape[3])))
     weight_index = {}
     # Searching for same index in a kernel
-    print(input_pad)
-    print(kernels[0][0])
-    print(kernels.shape)
+    # print(input_pad)
+    # print(kernels[0][0])
+    # print(kernels.shape)
     weights_map = {}
     ouuuut = 0
     for column_inx, column in enumerate(input_pad.T):
@@ -297,7 +297,7 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
                  weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx] = [weight_index]
          
 
-    print(weights_map)
+    # print(weights_map)
     # print(weights.shape)
     # quit()
     return weights_map
@@ -326,7 +326,7 @@ def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_we
       input_gradients_list.append(input_gradients)  
     
     input_gradients_real = np.array(input_gradients_list)
-    print(input_gradients_real)
+    # print(input_gradients_real)
     # quit()
     return input_gradients_real
 
@@ -361,8 +361,8 @@ def weight_deriative(inp: ndarray, input_pad: ndarray, input_index: map_input_we
       else:
           weight_gradients_real = np.concatenate([weight_gradients_real, weight_gradients])
     
-    print(weight_gradients)
-    quit()
+    # print(weight_gradients)
+    # quit()
     return weight_gradients
 
         
@@ -385,7 +385,7 @@ def np_index(arr, value):
         raise ValueError(f"{value} is not in array")
 
 
-input_1d = np.array([[1,2,3,4,5],
+input_1d = np.array([[2,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5]])
@@ -405,6 +405,6 @@ output, pad_input = model.forward_conv(input_1d, conv_1)
 sum = model.output_sum_basic_ver(output)
 i_der, w_der = model.backward_conv(output, conv_1)
 print(f'output{output}')
-print(f'sum{sum}')
 print(f'input_der{i_der}')
 print(f'weight_der{w_der}')
+print(f'sum: {sum}')
