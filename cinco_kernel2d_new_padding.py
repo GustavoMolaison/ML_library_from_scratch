@@ -65,53 +65,60 @@ class convulsive_model():
 
 
 
-def _pad_ld(inp: ndarray, num: int) -> ndarray:
-    # add 0 times num to begging and end of an array
-    z = np.array([0])
-    z =  np.repeat(z, num)
+def _pad_ld(inp: ndarray, param_size: int) -> ndarray:
 
-    if inp.ndim == 1:
-       return np.concatenate([z, inp, z])
-    if inp.ndim == 2:
-       return np.stack([np.concatenate([z, inp[0], z]) for i in range(inp.shape[0])])
+    z = np.array([0])
+    
+    z_to_add = inp.size - (inp.size - (param_size - 1))
+    for i in range(z_to_add):
+        
+        if i % 2 == 1:
+         inp = np.concatenate([z, inp])
+        if i % 2 == 0:
+         inp = np.concatenate([inp, z])
+    return inp
 
 
 # inp = input param = filter
 def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
      # filling entry data
-    param_len = param.shape[0]
-    param_mid = (param_len -1) // 2
-
-    if inp.ndim == 2:
-        input_pad_list = []
-        for column in inp.T:
-            input_pad = _pad_ld(column, param_mid)
-            input_pad_list.append(input_pad)
-
-        input_pad_real = np.array(input_pad_list).T
-        input_pad_list = []
-
-        for row in input_pad_real:
-            input_pad = _pad_ld(row, param_mid)
-            input_pad_list.append(input_pad)
+    param_len_0 = param.shape[0]
+    param_len_1 = param.shape[1]
+    
+    
+    
+    channels_combined_list = []
+    for inx, channel in enumerate(inp):
+        print('HALOOOOOOOOOOOOOOO')
         
-        input_pad = np.array(input_pad_list)
-        return input_pad
+        
+        
 
-    if inp.ndim == 1:   
-    
-      input_pad = _pad_ld(inp, param_mid)
-    
-      if not jump == 0:
-         amount_of_param_passes = input_pad.shape[0] - (param_len - 1)
-         confirmed_iteration =  (1 + ((amount_of_param_passes - 1) // (jump + 1)) )
-         skipped_iteration =  amount_of_param_passes - confirmed_iteration
- 
-         input_pad = _pad_ld(input_pad, (skipped_iteration + (jump - 1)))
+        channel_pad_list = []
+        for column in channel.T:
+            channel_pad = _pad_ld(column, param_len_0)
+            channel_pad_list.append(channel_pad)
 
-      return input_pad
-# class indexed_data():
-#         def __init__(self):
+        channel_pad_real = np.array(channel_pad_list).T
+        channel_pad_list = []
+
+        for row in channel_pad_real:
+            channel_pad = _pad_ld(row, param_len_1)
+            channel_pad_list.append(channel_pad)
+        
+       
+        
+        channel_pad = np.array(channel_pad_list)
+        channels_combined_list.append(channel_pad) 
+    
+    
+    channels_combined = np.stack(channels_combined_list)
+    
+    return channels_combined
+
+   
+
+
          
 def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int = 0) -> ndarray:
 
@@ -135,8 +142,8 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     # initilization of entry data
     input_pad  = input_pad_calc(inp, param)
     print(input_pad)
-    quit()
-    
+    # quit()
+ 
     param_in_row = (input_pad.shape[0] - (param.shape[0] - 1))
     param_in_columns =  (input_pad.shape[1] - (param.shape[1] - 1))
     out_array2 = np.zeros((param_in_row * param_in_columns, param.shape[0], param.shape[1]))
@@ -183,7 +190,8 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
     #       kernels_real = kernel  
     #   else:
     #       kernels_real = np.concatenate([kernels_real, kernel])
-    
+    print(input_pad)
+    # quit()
     # # 3d array
     # Calculating size of unpadded input data (input_pad.shape[0] - (param.shape[0] - 1), input_pad.shape[1] - (param.shape[1] - 1))
     kernels =np.zeros((input_pad.shape[0] - (param.shape[0] - 1), input_pad.shape[1] - (param.shape[1] - 1), param.shape[0], param.shape[1]))
@@ -345,32 +353,32 @@ def np_index(arr, value):
         raise ValueError(f"{value} is not in array")
 
 
-input_1d = np.array([[1,2,3,4,5],
+# input_1d = np.array([[1,2,3,4,5],
+#                      [5,2,3,4,5],
+#                      [5,2,3,4,5],
+#                      [5,2,3,4,5]])
+
+input_1d = np.array([[[1,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5],
-                     [5,2,3,4,5]])
+                     [5,2,3,4,5]],
 
-# input_1d = np.array([[[1,2,3,4,5],
-#                      [5,2,3,4,5],
-#                      [5,2,3,4,5],
-#                      [5,2,3,4,5]],
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
 
-#                      [[1,2,3,4,5],
-#                      [5,2,3,4,5],
-#                      [5,2,3,4,5],
-#                      [5,2,3,4,5]],
-
-#                      [[1,2,3,4,5],
-#                      [5,2,3,4,5],
-#                      [5,2,3,4,5],
-#                      [5,2,3,4,5]]])
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]]])
 # input_1d = np.array([1,2,3,4,5])
 # param_1d = np.array([[1,1,1],
 #                      [1,1,1],
 #                      [1,1,1]])
-param_1d = np.array([[1,1,1,1,1],
-                     [1,1,1,1,1],
-                     [1,1,1,1,1]
+param_1d = np.array([[1,1,1],
+                     [1,1,1],
+                     [1,1,1]
                      ])
 
 # input, pad_inp = conv_ld(input_1d, param_1d)
