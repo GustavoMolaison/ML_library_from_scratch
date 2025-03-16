@@ -173,44 +173,31 @@ def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
     out, input_pad = conv_ld(inp, param)
     
     return np.sum(out)
-# HEERE KERNELS NEED REAPIR YESYESYESYESYES 28.02.2025 28.02.202528.02.202528.02.202528.02.202528.02.202528.02.202528.02.202528.02.202528.02.2025
+
 def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
     #  for 2d data it returns 4d data
 
-    # input_pad = np.atleast_2d(input_pad)
-    # kernels = np.zeros((input_pad.shape[0], input_pad.shape[1] - (param.shape[0] - 1), param.shape[0]))
-    # for inx, row in enumerate(input_pad):
-    #   kernel = np.zeros((row.shape[0] - (param.shape[0] - 1), param.shape[0]))
-      
-    #   for i in range(row.shape[0] - (param.shape[0] - 1)):
-    #       kernel[i] = row[i : param.shape[0] + i]
-    
-    #   kernels[inx] = kernel 
-    #   if not 'kernels_real' in locals():
-    #       kernels_real = kernel  
-    #   else:
-    #       kernels_real = np.concatenate([kernels_real, kernel])
-    print(input_pad)
-    # quit()
-    # # 3d array
-    # Calculating size of unpadded input data (input_pad.shape[0] - (param.shape[0] - 1), input_pad.shape[1] - (param.shape[1] - 1))
-    kernels =np.zeros((input_pad.shape[0] - (param.shape[0] - 1), input_pad.shape[1] - (param.shape[1] - 1), param.shape[0], param.shape[1]))
-    # quit()
-    for column_inx, column in enumerate(input_pad.T):
-      for row_inx, row in enumerate(input_pad):
-        mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
-        if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
-            break
-        
-        
-        # quit()
-        kernels[row_inx, column_inx] = mask
-        
-        
+   
+    kernels_combined = []
 
-    # quit()
+    for channel in input_pad:
+      # # 3d array
+      # Calculating size of unpadded input data (input_pad.shape[0] - (param.shape[0] - 1), input_pad.shape[1] - (param.shape[1] - 1))
+      kernels =np.zeros((channel.shape[0] - (param.shape[0] - 1), channel.shape[1] - (param.shape[1] - 1), param.shape[0], param.shape[1]))
+      
+      for column_inx, column in enumerate(channel.T):
+        for row_inx, row in enumerate(channel):
+          mask = channel[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
+          if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
+              break
+        
+          kernels[row_inx, column_inx] = mask
+          
+      kernels_combined.append(kernels)
+   
+    kernels_combined  = np.stack(kernels_combined)
     
-    return kernels
+    return kernels_combined
 
 
 # CURRENTLY GET KERNELS GIVES 2D ARRAY WHERE SHAPE[0] ARE ROWS OF DATA IDK IF I WONT THAT OR SIMPLE 1D FOR KERNEL BUT WE WILL SE I GUEES
