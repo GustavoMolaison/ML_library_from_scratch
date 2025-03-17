@@ -141,29 +141,35 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     # initilization of entry data
     input_pad  = input_pad_calc(inp, param)
-    print(input_pad)
+    # print(input_pad.shape[3])
     # quit()
- 
-    param_in_row = (input_pad.shape[0] - (param.shape[0] - 1))
-    param_in_columns =  (input_pad.shape[1] - (param.shape[1] - 1))
+#    + input_pad.ndim is making sure code works with multiple channels and singe channel
+    param_in_row = (input_pad.shape[(-2 + input_pad.ndim)] - (param.shape[0] - 1))
+    param_in_columns =  (input_pad.shape[(-1 + input_pad.ndim)] - (param.shape[1] - 1))
     out_array2 = np.zeros((param_in_row * param_in_columns, param.shape[0], param.shape[1]))
     out_array_computed2 = np.zeros(inp.shape)
-    
-    for column_inx, column in enumerate(input_pad.T):
-      for row_inx, row in enumerate(input_pad):
-        kernel_count = 0
-        mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
-      
-        if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
-            break
+    channels_combined = []
+    for channel in input_pad:
+      for column_inx, column in enumerate(channel.T):
+        for row_inx, row in enumerate(channel):
+          kernel_count = 0
+          mask = channel[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
         
-     
-        out_array = mask * param
-        out_list_computed = np.sum(out_array)
+          if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
+              break
+        
+          print(mask)
+          quit()
+          out_array = mask * param
+          out_list_computed = np.sum(out_array)
 
-        out_array_computed2[row_inx, column_inx] = np.sum(out_array)
-        out_array2[(row_inx + (param_in_row * column_inx ))] = out_array
-     
+          out_array_computed2[row_inx, column_inx] = np.sum(out_array)
+          out_array2[(row_inx + (param_in_row * column_inx ))] = out_array
+      channels_combined.append(out_array_computed2) 
+
+    channels_combined = np.stack(channels_combined)
+    print(channels_combined)
+    quit()
     
     return out_array_computed2, input_pad, out_array2
 
