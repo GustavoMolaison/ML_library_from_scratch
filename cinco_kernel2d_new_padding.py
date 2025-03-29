@@ -259,17 +259,17 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
             
                 for column_mask_inx, column_mask in enumerate(row_mask):
                     ouuuut += 1
-                #    print(i)
-               
-                #    print((row_mask_inx + row_inx), (column_mask_inx + column_inx))
-                #    print(f'mask.size: {mask.size}')
-                #    print(f'column_mask_inx: {column_mask_inx}')
-                #    print(f'row_mask_inx: {row_mask_inx}')
-                #    print(f'column_inx: {column_inx}')
-                #    print(f'row_inx: {row_inx}')
-                #    print(f'column.shape: {column.shape[0]}')
-                #    print(f'mask.shape[0]: {mask.shape[0]}')
-                #    print(f'row_mask.size: {row_mask.size}')
+             
+                    print((row_mask_inx + row_inx), (column_mask_inx + column_inx))
+                    print(f'mask.size: {mask.size}')
+                    print(f'column_mask_inx: {column_mask_inx}')
+                    print(f'row_mask_inx: {row_mask_inx}')
+                    print(f'column_inx: {column_inx}')
+                    print(f'row_inx: {row_inx}')
+                    print(f'column.shape: {column.shape[0]}')
+                    print(f'row.shape: {row.shape[0]}')
+                    print(f'mask.shape[0]: {mask.shape[0]}')
+                    print(f'row_mask.size: {row_mask.size}')
         
                 weight_num = ((column_mask_inx + 1) + row_mask.size * row_mask_inx) + mask.size * (column_inx * (column.shape[0] - (mask.shape[0] - 1))) + (row_inx * mask.size)
                 weight_index = ((weight_num - 1) // weights.shape[1], (weight_num - 1) - (weight_num - 1) // weights.shape[1] * weights.shape[1])
@@ -277,10 +277,12 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
                     weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx].append(weight_index)
                 except KeyError:
                     weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx] = [weight_index]
+            print('HAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAH')
+            quit()
       channels_combined.append(weights_map) 
 #   currently savinf using list is it valid option thoug?
-    print(channels_combined)
-    print(weights.shape)
+    # print(channels_combined)
+    print(weights_map)
     quit()
     weights_map = channels_combined
     return weights_map
@@ -298,6 +300,8 @@ def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_we
         input_gradients = np.zeros(row.shape)
         for index_column in np.ndindex(row.shape):
           #   print(channel_index)
+            print(channel_weight_index)
+            quit()
          
             print(channel_weight_index) 
             weights_indexes = channel_weight_index[inx_row,  index_column[0]]
