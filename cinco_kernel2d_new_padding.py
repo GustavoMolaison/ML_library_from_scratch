@@ -225,8 +225,7 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
     return kernels_combined
 
 
-# CURRENTLY GET KERNELS GIVES 2D ARRAY WHERE SHAPE[0] ARE ROWS OF DATA IDK IF I WONT THAT OR SIMPLE 1D FOR KERNEL BUT WE WILL SE I GUEES
-# HEREHREHREHRE 1.03.2024
+
 # PROBLEM 05.03.2025 JAK SZUKAC KTORE IMPUTY Z KTORYMI WAGAMI SA POWIAZANE W 2 WYMIAROWYM INPUCIE WKONCU UZYWAMY MASKI A NIE ZWYKLEJ ITERACJI
 def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, kernels: ndarray, weights: ndarray, map: str) -> ndarray:
      
@@ -281,7 +280,7 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
 #   currently savinf using list is it valid option thoug?
     print(channels_combined)
     print(weights.shape)
-    quit()
+    # quit()
     weights_map = channels_combined
     return weights_map
 
