@@ -226,72 +226,100 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
 
 
 
-# PROBLEM 05.03.2025 JAK SZUKAC KTORE IMPUTY Z KTORYMI WAGAMI SA POWIAZANE W 2 WYMIAROWYM INPUCIE WKONCU UZYWAMY MASKI A NIE ZWYKLEJ ITERACJI
+
 def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, kernels: ndarray, weights: ndarray, map: str) -> ndarray:
      
     
     # turning kernels back to 2d
-    # print(kernels)
     # kernels = kernels.reshape(((kernels.shape[0] * kernels.shape[1], kernels.shape[2] * kernels.shape[3])))
-    # Searching for same index in a kernel
-    # print(input_pad)
-    # print(kernels[0][0])
-    # print(kernels.shape)
+    
+                   # ITERATING FOR EVERY CHANNEL
+    # __________________________________________________________________________________________________________________________________
     channels_combined = []
     for channel in input_pad:
-      weight_index = {}
-      weights_map = {}
-      ouuuut = 0
-      for column_inx, column in enumerate(channel.T):
-      #   print('BREAKKK')
-        for row_inx, row in enumerate(channel):
-            mask = channel[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
-            if mask.size != param.size:
+    #   print('channel??')
+    # __________________________________________________________________________________________________________________________________
+
+
+              #  CREATING VARIABLES TO SAVE DATA
+    # __________________________________________________________________________________________________________________________________
+      weights_map = {}  # (input index) : [(weight index)]
+    # __________________________________________________________________________________________________________________________________
+
+
+                        #ITERATING THROUGH AN ARRAY
+    # _________________________________________________________________ _________________________________________________________________                    
+    #   Frist we choose column then we iteratate through every row in this one column and move to next column so:
+    #     0                   1
+    #  0 [i1] <- step 1     [i4] <- step 4    step 1: i1
+    #  1 [i2] <- step 2     [i5]              step 2: i2
+    #  2 [i3] <- step 3     [i6]              step 3: i3
+    # 
+    # 
+      for column_inx, column in enumerate(channel.T): # iterating for column in array
+     
+        for row_inx, row in enumerate(channel): # iterating for row in array
+    # __________________________________________________________________________________________________________________________________
+                       
+
+                            #ITERATING WITH MASK
+# __________________________________________________________________________________________________________________________________
+     # row inx is row we are currently at
+     # param shape[0] is size of row in mask
+     # + row_inx is moving mask along the rows when 0 we start from frist row when equal to 1 we start from second so:
+#    param = 2x2
+     #     0    1   2
+    #  0 [i1] [i4] [i7]  mask 1:  [i1] [i4] -->  mask 2: [i2] [i5]  -->   mask 3: [i3] [i6]   --> mask 4: [i4] [i7]
+    #  1 [i2] [i5] [i8]           [i2] [i5]              [i3] [i6]     incorrect shape,                   [i5] [i8]
+    #  2 [i3] [i6] [i9]                                                moving to next column
+    #  
+            mask = channel[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx] #Calculations
+            if mask.size != param.size: #incorect shape detection
                 break
-            #   print(mask)
-            #   print(kernels_column)
-            #   print(mask)
-            #   print(channel)
-            #   quit()
+        #                        Here we iterate through mask we generated
+        #                        We use same method as before only now
+        #                        frist we move through columns, then change row.   
             for row_mask_inx, row_mask in enumerate(mask):
-                # print(row_mask)   
-            
+      
                 for column_mask_inx, column_mask in enumerate(row_mask):
-                    ouuuut += 1
+ # __________________________________________________________________________________________________________________________________                   
              
-                    print((row_mask_inx + row_inx), (column_mask_inx + column_inx))
-                    print(f'mask.size: {mask.size}')
-                    print(f'column_mask_inx: {column_mask_inx}')
-                    print(f'row_mask_inx: {row_mask_inx}')
-                    print(f'column_inx: {column_inx}')
-                    print(f'row_inx: {row_inx}')
-                    print(f'column.shape: {column.shape[0]}')
-                    print(f'row.shape: {row.shape[0]}')
-                    print(f'mask.shape[0]: {mask.shape[0]}')
-                    print(f'row_mask.size: {row_mask.size}')
-        
-                weight_num = ((column_mask_inx + 1) + row_mask.size * row_mask_inx) + mask.size * (column_inx * (column.shape[0] - (mask.shape[0] - 1))) + (row_inx * mask.size)
-                weight_index = ((weight_num - 1) // weights.shape[1], (weight_num - 1) - (weight_num - 1) // weights.shape[1] * weights.shape[1])
-                try:
-                    weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx].append(weight_index)
-                except KeyError:
-                    weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx] = [weight_index]
-            print('HAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAHHAWKTUAHWTUAH TUAHWTUAH')
-            quit()
+                    # print((row_mask_inx + row_inx), (column_mask_inx + column_inx))
+                    # print(f'mask.size: {mask.size}')
+                    # print(f'column_mask_inx: {column_mask_inx}')
+                    # print(f'row_mask_inx: {row_mask_inx}')
+                    # print(f'column_inx: {column_inx}')
+                    # print(f'row_inx: {row_inx}')
+                    # print(f'column.shape: {column.shape[0]}')
+                    # print(f'row.shape: {row.shape[0]}')
+                    # print(f'mask.shape[0]: {mask.shape[0]}')
+                    # print(f'row_mask.size: {row_mask.size}')
+            #                    
+            #                                                    Weight num is order in which weights are used durning forward function
+                                                            #    So weight (0,0) will be one multiplied by input (0,0)
+                    weight_num = ((column_mask_inx + 1) + row_mask.size * row_mask_inx) + mask.size * (column_inx * (column.shape[0] - (mask.shape[0] - 1))) + (row_inx * mask.size)
+                    weight_index = ((weight_num - 1) // weights.shape[1], (weight_num - 1) - (weight_num - 1) // weights.shape[1] * weights.shape[1])
+                    
+                    try:
+                       weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx].append(weight_index)
+                    except KeyError:
+                       weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx] = [weight_index]
+            
+            # print(weights_map)
+          
       channels_combined.append(weights_map) 
-#   currently savinf using list is it valid option thoug?
+
     # print(channels_combined)
-    print(weights_map)
-    quit()
+    
     weights_map = channels_combined
-    return weights_map
+    return channels_combined
 
 def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_weight_matrix, weights: ndarray) -> ndarray:
     
     
     # print(weight_index)
     
-    
+    # Function calculates how many times mask interacted with certain input!
     channels_combined = np.zeros(input_pad.shape)
     for channel_idx, (channel_weight_index, channel_input) in enumerate(zip(weight_index, input_pad)):
       input_gradients_list = []
@@ -299,10 +327,10 @@ def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_we
         input_gradients = np.zeros(row.shape)
         for index_column in np.ndindex(row.shape):
           #   print(channel_index)
-            print(channel_weight_index)
-            quit()
+           
+            
          
-            print(channel_weight_index) 
+          
             weights_indexes = channel_weight_index[inx_row,  index_column[0]]
             # getting weights conntected to input we work with currently
             inputs_weights = [weights[*i] for i in weights_indexes]
@@ -314,13 +342,14 @@ def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_we
     
 
         input_gradients_list.append(input_gradients) 
-
+      print(channel_idx)
       channels_combined[channel_idx] = np.array(input_gradients_list)
     #   input_gradients_real = np.array(input_gradients_list)
-      # print(input_gradients_real)
-      # quit()
+
       input_gradients_real = channels_combined
-      return input_gradients_real
+    print(input_gradients_real)
+    # quit()
+    return input_gradients_real
 
 def weight_deriative(inp: ndarray, input_pad: ndarray, input_index: map_input_weight_matrix, weights: ndarray)  -> ndarray:
     for row in input_pad:
