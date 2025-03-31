@@ -356,8 +356,8 @@ def weight_deriative(inp: ndarray, input_pad: ndarray, input_index: map_input_we
       weight_gradients = np.zeros(weights.shape)
 
       for index in np.ndindex(weights.shape):
-        #   print(input_index)
-        #   quit()
+          print(input_index)
+          quit()
         #   print(input_index)
         #   print(*index)
         #   print(index)
