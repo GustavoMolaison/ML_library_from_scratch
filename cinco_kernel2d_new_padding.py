@@ -384,7 +384,7 @@ def weight_derivative(inp: ndarray, input_pad: ndarray, input_index: map_input_w
             if len(input_indexes) == 0:
                continue
             # we get inputs from channel based on indexes we found were used 
-            # weights_inputs = [channel[row, column] for row, column in input_indexes]
+            # weights_inputs = [channel[row, column] for row, column in input_indexes] - old version
             rows, cols = zip(*input_indexes)
             weights_inputs = channel[rows, cols]
 
@@ -441,7 +441,7 @@ input_1d = np.array([[[1,2,3,4,5],
 #                      [1,1,1],
 #                      [1,1,1]])
 param_1d = np.array([[1,1,1],
-                     [1,1,1],
+                     [1,2,1],
                      [1,1,1]
                      ])
 
@@ -456,7 +456,7 @@ output, pad_input = model.forward_conv(input_1d, conv_1)
 sum = model.output_sum_basic_ver(output)
 i_der, w_der = model.backward_conv(output, conv_1)
 print(f'output{output}')
-print(f'input_der{i_der}')
+# print(f'input_der{i_der}')
 print(f'weight_der{w_der}')
 print(f'sum: {sum}')
 
