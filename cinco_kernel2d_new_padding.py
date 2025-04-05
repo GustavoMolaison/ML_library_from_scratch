@@ -24,10 +24,13 @@ class convulsive_model():
             
             
             self.kernels = get_kernels(param_shape, input_pad_shape)
+            print(self.kernels.shape)
+            # quit()
 
             # self.kernels_weights = np.random.uniform(0, 1, (self.kernels.shape[0], self.param.shape[0]))
-            self.kernels_weights = np.ones((self.kernels.shape[0] * self.kernels.shape[1], self.kernels.shape[2] * self.kernels.shape[3]))
+            self.kernels_weights = np.ones((self.kernels.shape[0],  self.kernels.shape[1] *  self.kernels.shape[2] * self.kernels.shape[3] * self.kernels.shape[3]))
             print(self.kernels_weights.shape)
+            # quit()
             
         
         def get_info(self):
@@ -236,7 +239,7 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
                    # ITERATING FOR EVERY CHANNEL
     # __________________________________________________________________________________________________________________________________
     channels_combined = []
-    for channel in input_pad:
+    for channel_idx, channel in enumerate(input_pad):
     #   print('channel??')
     # __________________________________________________________________________________________________________________________________
 
@@ -294,11 +297,16 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
                     # print(f'row.shape: {row.shape[0]}')
                     # print(f'mask.shape[0]: {mask.shape[0]}')
                     # print(f'row_mask.size: {row_mask.size}')
-            #                    
+            #                HERE IS THE ISSUE 02.04.2025     
             #                                                    Weight num is order in which weights are used durning forward function
                                                             #    So weight (0,0) will be one multiplied by input (0,0)
                     weight_num = ((column_mask_inx + 1) + row_mask.size * row_mask_inx) + mask.size * (column_inx * (column.shape[0] - (mask.shape[0] - 1))) + (row_inx * mask.size)
-                    weight_index = ((weight_num - 1) // weights.shape[1], (weight_num - 1) - (weight_num - 1) // weights.shape[1] * weights.shape[1])
+                    weight_index = (channel_idx, (weight_num - 1) - (weight_num - 1) // weights.shape[1] * weights.shape[1])
+                    # weight_index = ((weight_num - 1) // weights.shape[1], (weight_num - 1) - (weight_num - 1) // weights.shape[1] * weights.shape[1])
+                    print(f'weight_num{weight_num}')
+                    print(f'weight_index{weight_index}')
+                    # print(f'weights.shape[1]{weights.shape[1]}')
+                    
                     
                     try:
                        weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx].append(weight_index)
@@ -309,7 +317,9 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
           
       channels_combined.append(weights_map) 
 
-    # print(channels_combined)
+    print(channels_combined[2])
+    print(weights.shape)
+    # quit()
     
     weights_map = channels_combined
     return channels_combined
@@ -352,39 +362,37 @@ def input_deriative(inp: ndarray, input_pad: ndarray, weight_index: map_input_we
     return input_gradients_real
 
 def weight_deriative(inp: ndarray, input_pad: ndarray, input_index: map_input_weight_matrix, weights: ndarray)  -> ndarray:
-    for row in input_pad:
-      weight_gradients = np.zeros(weights.shape)
-
-      for index in np.ndindex(weights.shape):
-          print(input_index)
-          quit()
-        #   print(input_index)
-        #   print(*index)
-        #   print(index)
-        #   quit()
-          input_indexes = [key for key, value in input_index.items()
-                           if any(value_item == index for value_item in value)]
-                        #    for value_item in value if value_item == index]
-        #   print(input_indexes)
-        #   print(index)
-        #   input_indexes =  input_index[f'weight{[*index]}']
-        #   print(input_pad)
-        #   print(input_pad[input_indexes[0]])
-        #   quit()
-          weights_inputs = [input_pad[row, column] for row, column in input_indexes]
-
-        #   Here we are just adding inputs cause our operation is basiclt weight x input (for now we dont work with dense network at all)
-          gradient = np.sum(weights_inputs)
-          weight_gradients[*index] = gradient
-      
-      if not 'weight_gradients_real' in locals():
-          weight_gradients_real = weight_gradients  
-      else:
-          weight_gradients_real = np.concatenate([weight_gradients_real, weight_gradients])
     
-    # print(weight_gradients)
-    # quit()
-    return weight_gradients
+    channels_weight_gradients = []
+    for channel_idx, channel in enumerate(input_pad):
+      for row in input_pad:
+        weight_gradients = np.zeros(weights.shape)
+        # print(weights.shape)
+        # quit()
+  
+        for index in np.ndindex(weights.shape):
+  
+            input_indexes = [key for key, value in input_index[channel_idx].items()
+                             if any(value_item == index for value_item in value)]
+                          
+
+            weights_inputs = [channel[row, column] for row, column in input_indexes]
+            print(weights_inputs)
+            # quit()
+          #   Here we are just adding inputs cause our operation is basiclt weight x input (for now we dont work with dense network at all)
+            gradient = np.sum(weights_inputs)
+            weight_gradients[*index] = gradient
+      
+        if not 'weight_gradients_real' in locals():
+            weight_gradients_real = weight_gradients  
+        else:
+            weight_gradients_real = np.concatenate([weight_gradients_real, weight_gradients])
+      print(weight_gradients_real)
+      quit()
+      channels_weight_gradients.append(weight_gradients_real)
+     
+    print(channels_weight_gradients)
+    return channels_weight_gradients
 
         
 
