@@ -6,6 +6,7 @@ class convulsive_model():
         
         pass
 
+
     def initilialization(self,  inp: ndarray, param: ndarray, jump: int = 0 ):
         self.inp = inp
         self.param = param
@@ -422,7 +423,7 @@ def np_index(arr, value):
 #                      [5,2,3,4,5],
 #                      [5,2,3,4,5]])
 
-input_1d = np.array([[[1,2,3,4,5],
+input_1d = np.array([[[[1,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5]],
@@ -435,13 +436,28 @@ input_1d = np.array([[[1,2,3,4,5],
                      [[1,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5],
-                     [5,2,3,4,5]]])
+                     [5,2,3,4,5]]]
+                     
+                     [[[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]]]])
 # input_1d = np.array([1,2,3,4,5])
 # param_1d = np.array([[1,1,1],
 #                      [1,1,1],
 #                      [1,1,1]])
 param_1d = np.array([[1,1,1],
-                     [1,2,1],
+                     [1,1,1],
                      [1,1,1]
                      ])
 
@@ -455,6 +471,7 @@ conv_1 = model.conv_layer(inp = input_1d, param = param_1d, jump = 0)
 output, pad_input = model.forward_conv(input_1d, conv_1)
 sum = model.output_sum_basic_ver(output)
 i_der, w_der = model.backward_conv(output, conv_1)
+flatten = output
 print(f'output{output}')
 # print(f'input_der{i_der}')
 print(f'weight_der{w_der}')
