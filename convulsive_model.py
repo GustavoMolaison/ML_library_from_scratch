@@ -66,12 +66,25 @@ class convulsive_model():
         input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, conv_layer.kernels_weights,  map = 'input')
         i_der = input_derivative(inp, conv_layer.input_pad, weight_index, conv_layer.kernels_weights)
         w_der = weight_derivative(inp, conv_layer.input_pad, input_index, conv_layer.kernels_weights)
-        return i_der, w_der
+        w_der_to_read = d1_to_d2(w_der, conv_layer.param)
+        # changin weight deriative so each sample was a diffrent kernel cause its easier to read 
+        return i_der, w_der_to_read
 
 
 
-
-
+# changes array from (180) to (3, 60) for exmaple 180 is input 60 is param
+def d1_to_d2(input, param):
+    window = param.size
+    output = np.zeros((input.shape[0], input.shape[1] // window, *param.shape))
+    for channel_idx, channel in enumerate(input):
+        channel_w_der = np.zeros((input.shape[1] // window, *param.shape))
+        for stride in range((input.shape[1] // window)):
+            channel_w_der[stride] = channel[stride : window + stride].reshape(param.shape)
+        output[channel_idx] = channel_w_der
+    
+    return output
+       
+       
 
 def _pad_ld(inp: ndarray, param_size: int) -> ndarray:
 
@@ -378,7 +391,7 @@ def weight_derivative(inp: ndarray, input_pad: ndarray, input_index: map_input_w
           
           # Get all input positions whose associated weights include the current weight index
           # this way we get every input weight was multiplied by
-          # every input in input_index has described weights to it it means those to were multiplied by eachother
+          # every input in input_index has described weights to it. It means those were multiplied by eachother
             input_indexes = [key for key, value in input_index[channel_idx].items()
                              if index in value]
             # if list is empty (equal to 0) we skip iteration to dont waste time and dont overwrite anythink because np.zeros are zero everywhere anyway
@@ -395,7 +408,7 @@ def weight_derivative(inp: ndarray, input_pad: ndarray, input_index: map_input_w
             weight_gradients[*index] = gradient
             
        
- 
+    
     return weight_gradients
 
         
@@ -436,8 +449,23 @@ input_1d = np.array([[[[1,2,3,4,5],
                      [[1,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5],
-                     [5,2,3,4,5]]]
+                     [5,2,3,4,5]]],
                      
+                     [[[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]]],
+
                      [[[1,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5],
@@ -467,15 +495,51 @@ param_1d = np.array([[1,1,1],
 # quit()
 
 model = convulsive_model()
-conv_1 = model.conv_layer(inp = input_1d, param = param_1d, jump = 0)
-output, pad_input = model.forward_conv(input_1d, conv_1)
-sum = model.output_sum_basic_ver(output)
-i_der, w_der = model.backward_conv(output, conv_1)
-flatten = output
-print(f'output{output}')
-# print(f'input_der{i_der}')
-print(f'weight_der{w_der}')
-print(f'sum: {sum}')
+def convulsive_input_output(input: ndarray, model):
+  output_final = np.zeros(input.shape)
+  sum_list = []
+  input_der_list = []
+  weight_der_list = []
+
+  for sample_idx, sample in enumerate(input):
+    print(sample)
+    # quit()
+    conv_1 = model.conv_layer(inp = sample, param = param_1d, jump = 0)
+    output, pad_input = model.forward_conv(sample, conv_1)
+
+    sum = model.output_sum_basic_ver(output)
+    sum_list.append(sum)
+
+    i_der, w_der = model.backward_conv(output, conv_1)
+    input_der_list.append(i_der)
+    weight_der_list.append(w_der)
+
+    flatten = output
+    output_final[sample_idx] = flatten
+  
+  return output_final, sum_list, input_der_list, weight_der_list
+model = convulsive_model()
+output_final, sum_list, input_der_list, weight_der_list = convulsive_input_output(input_1d, model)
+
+print('END')
+print(output_final)
+# print(sum_list)
+# print(input_der_list)
+# print(weight_der_list)
+
+
+
+
+# conv_1 = model.conv_layer(inp = input_1d, param = param_1d, jump = 0)
+# output, pad_input = model.forward_conv(input_1d, conv_1)
+# sum = model.output_sum_basic_ver(output)
+# i_der, w_der = model.backward_conv(output, conv_1)
+# flatten = output
+
+# print(f'output{output}')
+# # print(f'input_der{i_der}')
+# print(f'weight_der{w_der}')
+# print(f'sum: {sum}')
 
 # NOTATKI
 # PROBLEM JES W MAPOWANIU JAK COS POPROSTU NEI DAJE ERRORA
