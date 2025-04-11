@@ -45,6 +45,8 @@ class convulsive_model():
         output, input_pad, conv_layer.kernels_data = conv_ld(inp, conv_layer.param, conv_layer.jump)
         conv_layer.input_pad = input_pad
         conv_layer.kernels = get_kernels(conv_layer.param, input_pad)
+        # print(conv_layer.kernels.shape)
+        # quit()
         
         
     
@@ -525,7 +527,7 @@ print('END')
 print(output_final)
 # print(sum_list)
 # print(input_der_list)
-# print(weight_der_list)
+print(weight_der_list[0].shape)
 
 
 
@@ -542,4 +544,5 @@ print(output_final)
 # print(f'sum: {sum}')
 
 # NOTATKI
-# PROBLEM JES W MAPOWANIU JAK COS POPROSTU NEI DAJE ERRORA
+# POCHODNE WAG ROZWAZYC JAK TO ZROBIC CZEGO BĘDE POTRZEBOWAŁ TAK W SUMIE
+# 

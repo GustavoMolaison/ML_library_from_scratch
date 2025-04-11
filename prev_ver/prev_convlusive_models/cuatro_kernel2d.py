@@ -133,7 +133,6 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     # initilization of entry data
-
     
     input_pad  = input_pad_calc(inp, param)
     
@@ -145,7 +144,6 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     out_array2 = np.zeros((param_in_row * param_in_columns, param.shape[0], param.shape[1]))
     out_array_computed2 = np.zeros(inp.shape)
     
-
     for column_inx, column in enumerate(input_pad.T):
       for row_inx, row in enumerate(input_pad):
         kernel_count = 0
@@ -270,7 +268,7 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
           mask = input_pad[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
           if mask.size != param.size:
              break
-          print(mask)
+        #   print(mask)
         #   print(kernels_column)
         #   print(mask)
         #   print(input_pad)
@@ -282,15 +280,15 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
                ouuuut += 1
             #    print(i)
                
-               print((row_mask_inx + row_inx), (column_mask_inx + column_inx))
-               print(f'mask.size: {mask.size}')
-               print(f'column_mask_inx: {column_mask_inx}')
-               print(f'row_mask_inx: {row_mask_inx}')
-               print(f'column_inx: {column_inx}')
-               print(f'row_inx: {row_inx}')
-               print(f'column.shape: {column.shape[0]}')
-               print(f'mask.shape[0]: {mask.shape[0]}')
-               print(f'row_mask.size: {row_mask.size}')
+            #    print((row_mask_inx + row_inx), (column_mask_inx + column_inx))
+            #    print(f'mask.size: {mask.size}')
+            #    print(f'column_mask_inx: {column_mask_inx}')
+            #    print(f'row_mask_inx: {row_mask_inx}')
+            #    print(f'column_inx: {column_inx}')
+            #    print(f'row_inx: {row_inx}')
+            #    print(f'column.shape: {column.shape[0]}')
+            #    print(f'mask.shape[0]: {mask.shape[0]}')
+            #    print(f'row_mask.size: {row_mask.size}')
             #    IT SEEMS TO WORK FOR THE FRIST COLUMN_INX ITERATION ON SECOND NO THO
                try:
                  weights_map[f'input_index: {[row_mask_inx + row_inx, column_mask_inx + column_inx]}'].append(

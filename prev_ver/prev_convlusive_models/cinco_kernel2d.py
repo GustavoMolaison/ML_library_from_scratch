@@ -80,7 +80,7 @@ def _pad_ld(inp: ndarray, num: int) -> ndarray:
 def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
      # filling entry data
     param_len = param.shape[0]
-    param_mid = (param_len -1) // 2
+    param_mid = param_len // 2
 
     if inp.ndim == 2:
         input_pad_list = []
