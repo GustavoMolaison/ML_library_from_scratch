@@ -44,7 +44,7 @@ class hugo_2_0():
             self.layer += mse_grad
             print(f'new weights {self.layer}')
 
-        
+            # MSE GRAD POKAZUJE JA KZMIENI SIE MSE GDY ZWIEKSZYMY OUTPUT O JEDEN
 
 
 
