@@ -3,18 +3,28 @@ import pandas as pd
 
 def dot_calc(x, w):
     output = np.dot(x, w)
-    deriative = x
-    return output, deriative
+    derivative = x
+    return output, derivative
 
 def bias_calc(x, b):
     output = x + b
-    deriative = 1
-    return output, deriative
+    derivative = 1
+    return output, derivative
+
+def relu(input):
+    output = np.maximum(0, input)
+    derivative = (output > 0).astype(float) # astype change bool True to 1 and False to 0 our deriatives
+    return output, derivative
+
+def leaky_relu(input, alpha = 0.01):
+    output = np.where(input < 0, input * alpha, input)
+    derivative = np.where(output < input, alpha, 1.0)
+    return output, derivative
 
 def sigmoid(input):
     output = 1/(1 + np.exp(-input))
-    deriative = np.exp(-input)/ (1 + np.exp(-input))**2
-    return output, deriative
+    derivative = np.exp(-input)/ (1 + np.exp(-input))**2
+    return output, derivative
 
 def no_activation_function(input):
     return input, 1
@@ -25,13 +35,17 @@ def clipping(grads, clip_value):
 
 class hugo_2_0():
     def __init__(self):
-        self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid}
+        self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu}
+        self.lr = 0.01
         self.layers = []
         pass
 
     def info(self):
-        
         print(self.layers[-1].layer_weights.shape)
+    
+    def modify_model(self, lr = 0.01):
+        self.lr =lr
+        
        
         
 
@@ -43,7 +57,12 @@ class hugo_2_0():
         else:   
             for density in range(dense):
                self.layers.append(layer)
-       
+    
+    def check_layers_state(self):
+        dead_neuronds_indices = [i for i, layer in enumerate(self.layers) if layer.dead_neurons]
+        print('Indices of layers consisiting dead neurons')
+        print(dead_neuronds_indices)
+
 
 
     class Layer():
@@ -99,71 +118,53 @@ class hugo_2_0():
             
         #     self.weight_gradient = input
         #     return self.weight_gradient
-
+        
+        
         def backward_L(self, grad):
-            print(f'grad: {grad}')
-            # print(f'LAYER: {self.weight_gradient}')
-            # print(f'weights: {self.layer_weights.shape}')
-            # print(f'weights grad: {self.weight_gradient.shape}')
-            # quit()
-
-            # layer_weight_grad = np.sum(grad * self.weight_gradient)
+            # print(f'grad: {grad}')
+            
             layer_weight_grad = np.dot(self.weight_gradient.T, grad)
             layer_bias_grad = np.sum(grad * self.bias_gradient, axis = 0)
+            print(f'grad: {grad}')
+            print(f'self.layer_bias: {self.layer_bias}')
+            print(f'shape self.bias_gradient: {layer_bias_grad}')
+            # quit()
             layer_input_grad = np.dot(grad, self.layer_weights.T) 
             #  gradient is how current layer affects loss, if we multiply it by weights we get how previous layer affected the loss cause input is multiplied by weights
-            # layer_input_grad = np.sum(grad * self.input)
+        
             
-            self.layer_weights -= layer_weight_grad * 0.01
-            self.layer_bias -= layer_bias_grad * 0.1
+            self.layer_weights -= layer_weight_grad * self.model.lr
+            self.layer_bias -= layer_bias_grad * self.model.lr
             # print(f'new weights {self.layer_weights}')
             # print(f'new biases {self.layer_bias}\n')
 
             return layer_input_grad
     
-    def forward(self, input):
-        output = input
-        for layer in self.layers:
-            output = layer.forward_L(output)
-
-        if not hasattr(self, 'output_layer'):
-          self.output_layer = self.Layer(self)
-          self.output_layer.set_layer(batch_size = output.shape[1], neurons_num = input.shape[1], activation_function = 'none')
-          
-        output = self.output_layer.forward_L(output)
-        
-        return output
-
    
 
     def backward(self, x, y):
         mse_loss = np.mean((y - x)**2)
         mse_grad = (2 / y.shape[0]) * (x - y)
-        # print(f'mse_loss{mse_loss}')
-        # print(f'mse_grad{mse_grad}')
+     
         grad = mse_grad
-        # print(f'grad: {grad}')
-        # print(f'grad.shape: {grad.shape}\n')
         grad = self.output_layer.backward_L(grad)
-        # print(f'layer input: {self.output_layer.input}')
-        # print(f'layer input shape: {self.output_layer.input.shape}\n')
-        # print(f'layer output: {self.output_layer.output}')
-        # print(f'layer output: {self.output_layer.output.shape}\n')
-        # print(f'grad: {grad}')
-        # print(f'grad.shape: {grad.shape}\n')
-        # quit()
+       
         for layer in reversed(self.layers):
-            # print(f'layer input: {layer.input}')
-            # print(f'layer input shape: {layer.input.shape}\n')
-            # print(f'layer output: {layer.output}')
-            # print(f'layer output: {layer.output.shape}\n')
-            # print(f'grad: {grad}')
-            # print(f'grad.shape: {grad.shape}\n')
-            grad = clipping(grad, 1)
             grad = layer.backward_L(grad)
             
         return mse_loss    
-            
+    
+    def forward(self, input):
+           output = input
+           for layer in self.layers:
+              output = layer.forward_L(output)
+
+           if not hasattr(self, 'output_layer'):
+              self.output_layer = self.Layer(self)
+              self.output_layer.set_layer(batch_size = output.shape[1], neurons_num = input.shape[1], activation_function = 'none')
+          
+           output = self.output_layer.forward_L(output)
+           return output     
 
         
 
@@ -184,8 +185,8 @@ layer_I.set_layer(batch_size= X.shape[1], neurons_num = 5, activation_function= 
 model.add_layer(layer_I) 
 
 dense = model.Layer(model)
-dense.set_layer(batch_size = 5, neurons_num = 5, activation_function= 'sigmoid', is_input_layer = False)
-model.add_layer(dense, dense = 5) 
+dense.set_layer(batch_size = 5, neurons_num = 5, activation_function= 'leaky relu', is_input_layer = False)
+model.add_layer(dense, dense = 1) 
 
 
 
@@ -200,4 +201,4 @@ for i in range(9):
  print(f'loss: {loss}\n')
 
 # print(f'output{output}')
-
+model.check_layers_state()
