@@ -27,7 +27,7 @@ def sigmoid(input):
     return output, derivative
 
 def no_activation_function(input):
-    return input, 1
+    return input, np.ones((input.shape))
 
 def clipping(grads, clip_value):
     return np.clip(grads, -clip_value, clip_value)
@@ -53,6 +53,7 @@ class hugo_2_0():
       
         if layer.is_output_layer == True:
            self.output_layer = layer
+ 
         
         else:   
             for density in range(dense):
@@ -70,8 +71,9 @@ class hugo_2_0():
             self.model = model
             pass
 
-        def set_layer(self, neurons_num, batch_size, activation_function, is_input_layer = False, is_output_layer = False):
-            self.layer_weights = np.random.uniform(-1, 1, (batch_size, neurons_num))
+        def set_layer(self, neurons_num,  input_features, activation_function, is_input_layer = False, is_output_layer = False):
+            self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
+            # self.layer_weights = np.random.uniform(-1, 1, (neurons_num,  input_features))
             
             self.layer_bias = np.zeros(neurons_num,)
             self.layer_af_calc = self.model.activation_functions[activation_function]
@@ -85,7 +87,8 @@ class hugo_2_0():
 
     
         def forward_L(self, input):
-            self.input = input
+            self.input = input.T
+            # input = input.T
             if np.any(self.layer_weights == 0):
                 self.dead_neurons = True
                 print('Dead neurons appeared')
@@ -96,7 +99,9 @@ class hugo_2_0():
             self.output, self.weight_gradient  = dot_calc(input, self.layer_weights)
             self.output, self.bias_gradient  = bias_calc(self.output, self.layer_bias)
             self.output, self.af_gradient = self.layer_af_calc(self.output)
-            # print(self.af_gradient)
+            print(f'self.output{self.output.shape}')
+            print(f'self.af_gradient{self.af_gradient.shape}')
+            print(f'self.weight_gradient{self.weight_gradient.shape}')
             # quit()
 
             self.weight_gradient = self.weight_gradient * self.af_gradient
@@ -104,7 +109,7 @@ class hugo_2_0():
             # quit()
             # print(f'output: {self.output}\n')
             
-            
+            print(f'self.weight_gradient.shape{self.weight_gradient.shape}')
 
             # self.weight_gradient = input
             # self.bias_gradient = 1
@@ -122,12 +127,11 @@ class hugo_2_0():
         
         def backward_L(self, grad):
             # print(f'grad: {grad}')
-            
+            print(f'self.weight_gradient: {self.weight_gradient.shape}')
+            print(f'self.layer_weights: {self.layer_weights.shape}')
             layer_weight_grad = np.dot(self.weight_gradient.T, grad)
             layer_bias_grad = np.sum(grad * self.bias_gradient, axis = 0)
-            print(f'grad: {grad}')
-            print(f'self.layer_bias: {self.layer_bias}')
-            print(f'shape self.bias_gradient: {layer_bias_grad}')
+            # print(f'shape self.bias_gradient: {layer_bias_grad}')
             # quit()
             layer_input_grad = np.dot(grad, self.layer_weights.T) 
             #  gradient is how current layer affects loss, if we multiply it by weights we get how previous layer affected the loss cause input is multiplied by weights
@@ -137,7 +141,12 @@ class hugo_2_0():
             self.layer_bias -= layer_bias_grad * self.model.lr
             # print(f'new weights {self.layer_weights}')
             # print(f'new biases {self.layer_bias}\n')
-
+            # print(f'layer_input_grad: {layer_input_grad.shape}')
+            print("W1.shape:",self.layer_weights.shape)
+            print("X.shape:", self.input.shape)
+            print("dZ1.shape:", layer_input_grad.shape)
+            print("dW1.shape (should match W1):",layer_weight_grad.shape)
+            
             return layer_input_grad
     
    
@@ -145,23 +154,24 @@ class hugo_2_0():
     def backward(self, x, y):
         mse_loss = np.mean((y - x)**2)
         mse_grad = (2 / y.shape[0]) * (x - y)
-     
+        print(f'grad_before: {mse_grad.shape}')
         grad = mse_grad
         grad = self.output_layer.backward_L(grad)
        
         for layer in reversed(self.layers):
             grad = layer.backward_L(grad)
-            
+            # quit()
+        quit()
         return mse_loss    
     
     def forward(self, input):
            output = input
            for layer in self.layers:
               output = layer.forward_L(output)
-
+           
            if not hasattr(self, 'output_layer'):
               self.output_layer = self.Layer(self)
-              self.output_layer.set_layer(batch_size = output.shape[1], neurons_num = input.shape[1], activation_function = 'none')
+              self.output_layer.set_layer(input_features = output.shape[1], neurons_num = input.shape[1], activation_function = 'leaky relu')
           
            output = self.output_layer.forward_L(output)
            return output     
@@ -181,11 +191,11 @@ Y = X**2
 model = hugo_2_0()
 
 layer_I = model.Layer(model)
-layer_I.set_layer(batch_size= X.shape[1], neurons_num = 5, activation_function= 'none', is_input_layer = True)
+layer_I.set_layer(input_features= X.shape[1], neurons_num = 5, activation_function= 'none', is_input_layer = True)
 model.add_layer(layer_I) 
 
 dense = model.Layer(model)
-dense.set_layer(batch_size = 5, neurons_num = 5, activation_function= 'leaky relu', is_input_layer = False)
+dense.set_layer(input_features = 5, neurons_num = 5, activation_function= 'leaky relu', is_input_layer = False)
 model.add_layer(dense, dense = 1) 
 
 
