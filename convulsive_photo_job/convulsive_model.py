@@ -527,7 +527,7 @@ print('END')
 print(output_final)
 # print(sum_list)
 # print(input_der_list)
-print(weight_der_list[0].shape)
+# print(weight_der_list[0].shape)
 
 
 
