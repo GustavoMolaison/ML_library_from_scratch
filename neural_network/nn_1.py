@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def dot_calc(x, w):
     output = np.dot(x, w)
@@ -43,6 +44,9 @@ def mse_loss(x, y):
 
     return loss, loss_derivative
 
+
+    
+
 class hugo_2_0():
     def __init__(self, loss):
         self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
@@ -55,7 +59,7 @@ class hugo_2_0():
     def info(self):
         print(self.layers[-1].layer_weights)
     
-    def modify_model(self, lr = 0.01):
+    def modify_model(self, lr = 0.001):
         self.lr =lr
         
        
@@ -83,7 +87,7 @@ class hugo_2_0():
             self.model = model
             pass
 
-        def set_layer(self, neurons_num,  input_features, activation_function, is_input_layer = False, is_output_layer = False):
+        def set_layer(self, neurons_num,  input_features, activation_function, is_input_layer = False, is_output_layer = False, lr_update_method = 'none'):
             self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
             # self.layer_weights = np.random.uniform(-1, 1, (neurons_num,  input_features))
             
@@ -93,6 +97,8 @@ class hugo_2_0():
             self.is_input_layer = is_input_layer
             self.is_output_layer = is_output_layer
             self.dead_neurons = False
+            self.lr_bonus = 0
+            self.lr_update_method = lr_update_method
             # quit()
             # print(self.layer_weights)
             # quit()
@@ -148,27 +154,30 @@ class hugo_2_0():
             layer_bias_grad = np.sum(grad * self.bias_gradient, axis = 0)
             layer_input_grad = np.dot(grad, self.layer_weights.T) 
             #  gradient is how current layer affects loss, if we multiply it by weights we get how previous layer affected the loss cause input is multiplied by weights
-        
             
-            self.layer_weights -= layer_weight_grad * self.model.lr
-            self.layer_bias -= layer_bias_grad * self.model.lr
-            # print(f'new weights {self.layer_weights}')
-            # print(f'new biases {self.layer_bias}\n')
-            # print(f'layer_input_grad: {layer_input_grad.shape}')
-            # print("W1.shape:",self.layer_weights.shape)
-            # print("X.shape:", self.input.shape)
-            # print("dZ1.shape:", layer_input_grad.shape)
-            # print("dW1.shape (should match W1):",layer_weight_grad.shape)
+        
+            self.layer_weights -= layer_weight_grad * (self.model.lr + self.lr_update(layer_weight_grad))
+            self.layer_bias -= layer_bias_grad * (self.model.lr + self.lr_update(layer_bias_grad))
+            
             
             return layer_input_grad
     
-   
+        def lr_update(self, grad):
+            if self.lr_update_method == 'none':
+                return 0
+            
+            if self.lr_update_method == 'Hugo_lr_bonus':
+              self.lr_bonus += np.mean(np.abs(grad))  * self.model.lr**2 * 0.1
+              self.lr_bonus = np.clip(self.lr_bonus, -self.model.lr, self.model.lr)
+              return self.lr_bonus
+        
+            
+            
 
     def backward(self, x, y):
         mse_loss, mse_grad = self.loss_methods[self.loss](x, y)
         # mse_loss = np.mean((y - x)**2)
         # mse_grad = (2 / y.shape[0]) * (x - y)
-        print(f'grad_before: {mse_grad.shape}')
         grad = mse_grad
         grad = self.output_layer.backward_L(grad)
        
@@ -186,15 +195,31 @@ class hugo_2_0():
            
            if not hasattr(self, 'output_layer'):
               self.output_layer = self.Layer(self)
-              print(output.shape[1])
-              print(input.shape[1])
-              print(output.shape)
-              quit()
+              
               self.output_layer.set_layer(input_features = output.shape[1], neurons_num = input.shape[1], activation_function = 'leaky relu')
           
            output = self.output_layer.forward_L(output)
            return output     
+    
 
+def run_model(model, epochs, X_training, Y_training, X_val, Y_val, mse):
+      loss_over_epochs_t = []
+      loss_over_epochs_v = [] 
+      for i in range(epochs):
+        print(f'EPOCH {i}')
+        output = model.forward(input = X_training)
+ 
+        loss = model.backward(output, Y_training)
+        loss_over_epochs_t.append(loss)
+        print(f'Output{output}')
+        output = model.forward(input = X_val)
+        val_mse_loss = np.mean((Y_val- output)**2)
+        loss_over_epochs_v.append(val_mse_loss)
+  
+        print(f'training loss: {loss}\n')
+        print(f'VALIDATION loss: {val_mse_loss}\n')
+      
+      return loss_over_epochs_t, loss_over_epochs_v
         
 
                     #  LEVEL 1 (DONE) 
@@ -213,34 +238,65 @@ X_val, Y_val = X[int(X.shape[0] * 0.8):], Y[int(Y.shape[0] * 0.8):]
 model = hugo_2_0(loss = 'mse')
 
 layer_I = model.Layer(model)
-layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 32, activation_function= 'leaky relu', is_input_layer = True)
+layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 64, activation_function= 'leaky relu', is_input_layer = True, lr_update_method = 'Hugo_lr_bonus')
 model.add_layer(layer_I) 
 
 dense = model.Layer(model)
-dense.set_layer(input_features = 32, neurons_num = 32, activation_function= 'leaky relu', is_input_layer = False)
+dense.set_layer(input_features = 64, neurons_num = 64, activation_function= 'leaky relu', is_input_layer = False, lr_update_method = 'Hugo_lr_bonus')
 model.add_layer(dense, dense = 1) 
 
 layer_0 = model.Layer(model)
-layer_0.set_layer(input_features = 32, neurons_num = X_training.shape[1], activation_function= 'leaky relu', is_output_layer = True)
+layer_0.set_layer(input_features = 64, neurons_num = X_training.shape[1], activation_function= 'leaky relu', is_output_layer = True, lr_update_method = 'Hugo_lr_bonus')
 model.add_layer(layer_0, dense = 1) 
 
 
+model2 = hugo_2_0(loss = 'mse')
+
+layer_I = model2.Layer(model2)
+layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 64, activation_function= 'leaky relu', is_input_layer = True, lr_update_method = 'none')
+model2.add_layer(layer_I) 
+
+dense = model2.Layer(model2)
+dense.set_layer(input_features = 64, neurons_num = 64, activation_function= 'leaky relu', is_input_layer = False, lr_update_method = 'none')
+model2.add_layer(dense, dense = 1) 
+
+layer_0 = model2.Layer(model2)
+layer_0.set_layer(input_features = 64, neurons_num = X_training.shape[1], activation_function= 'leaky relu', is_output_layer = True, lr_update_method = 'none')
+model2.add_layer(layer_0, dense = 1) 
 
 
 
-for i in range(100):
- print(f'EPOCH {i}')
- output = model.forward(input = X_training)
- 
- loss = model.backward(output, Y_training)
+epochs = 100
+loss_over_epochs_t, loss_over_epochs_v = run_model(model, epochs, X_training, Y_training, X_val, Y_val, 'mse')
+loss_over_epochs_t2, loss_over_epochs_v2 = run_model(model2, epochs, X_training, Y_training, X_val, Y_val, 'mse')
+print('                A')
+print(f'training loss: {loss_over_epochs_t[-1]}')
+print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
 
- output = model.forward(input = X_val)
- val_mse_loss = np.mean((Y_val- output)**2)
-#  print(f'output{output}')
- print(f'training loss: {loss}\n')
- print(f'VALIDATION loss: {val_mse_loss}\n')
-
+print('                B')
+print(f'training loss: {loss_over_epochs_t2[-1]}')
+print(f'VALIDATION loss: {loss_over_epochs_v2[-1]}\n')
 
 
-# print(f'output{output}')
-model.check_layers_state()
+
+plt.figure(figsize=(12, 6))
+epochs = np.arange(1,101)
+
+
+# Training Loss
+plt.plot(epochs, loss_over_epochs_t, label='Train Loss - Net A', linestyle='--', color='blue')
+plt.plot(epochs, loss_over_epochs_t2, label='Train Loss - Net B', linestyle='--', color='green')
+
+# Validation Loss
+plt.plot(epochs, loss_over_epochs_v, label='Val Loss - Net A', linestyle='-', color='blue')
+plt.plot(epochs, loss_over_epochs_v2, label='Val Loss - Net B', linestyle='-', color='green')
+
+# Labels and Title
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.title('Training vs Validation Loss for Neural Networks')
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+
+plt.show()
