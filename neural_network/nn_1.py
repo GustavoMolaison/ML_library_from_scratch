@@ -44,15 +44,26 @@ def mse_loss(x, y):
 
     return loss, loss_derivative
 
+def none_w_initilial(neurons_num):
+    return 1
+
+def he(neurons_num):
+    return np.sqrt(2. / neurons_num)
+
+def min_max_normalize(data):
+    return (data - np.min(data, axis = 0)) / (np.max(data, axis = 0) - np.min(data, axis=0) + 1e-8)
+
 
     
 
 class hugo_2_0():
-    def __init__(self, loss):
+    def __init__(self, loss, weight_initialization = 'none', lr = 0.001):
         self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
         self.loss_methods = {'mse': mse_loss}
         self.loss = loss
-        self.lr = 0.001
+        self.lr = lr
+        self.weights_initializations = {'none' : none_w_initilial, 'he' : he}
+        self.weights_initialization = weight_initialization
         self.layers = []
         pass
 
@@ -61,7 +72,8 @@ class hugo_2_0():
     
     def modify_model(self, lr = 0.001):
         self.lr =lr
-        
+    
+   
        
         
 
@@ -87,9 +99,12 @@ class hugo_2_0():
             self.model = model
             pass
 
-        def set_layer(self, neurons_num,  input_features, activation_function, is_input_layer = False, is_output_layer = False, lr_update_method = 'none'):
-            self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
-            # self.layer_weights = np.random.uniform(-1, 1, (neurons_num,  input_features))
+        def set_layer(self, neurons_num,  input_features, activation_function, is_input_layer = False, is_output_layer = False, lr_update_method = 'none', weight_initilization = 'notchossed' ):
+            if weight_initilization == 'notchossed':
+                self.weight_initilization = self.model.weights_initialization
+
+            # self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
+            self.layer_weights = np.random.randn(input_features,  neurons_num) * self.model.weights_initializations[self.weight_initilization](neurons_num)
             
             self.layer_bias = np.zeros(neurons_num,)
             self.layer_af_calc = self.model.activation_functions[activation_function]
@@ -188,7 +203,7 @@ class hugo_2_0():
         return mse_loss    
     
     def forward(self, input):
-            
+           input = min_max_normalize(input)
            output = input
            for layer in self.layers:
               output = layer.forward_L(output)
@@ -196,7 +211,7 @@ class hugo_2_0():
            if not hasattr(self, 'output_layer'):
               self.output_layer = self.Layer(self)
               
-              self.output_layer.set_layer(input_features = output.shape[1], neurons_num = input.shape[1], activation_function = 'leaky relu')
+              self.output_layer.set_layer(input_features = output.shape[1], neurons_num = input.shape[1], activation_function = 'none')
           
            output = self.output_layer.forward_L(output)
            return output     
@@ -207,35 +222,44 @@ def run_model(model, epochs, X_training, Y_training, X_val, Y_val, mse):
       loss_over_epochs_v = [] 
       for i in range(epochs):
         print(f'EPOCH {i}')
-        output = model.forward(input = X_training)
+        output_t = model.forward(input = X_training)
  
-        loss = model.backward(output, Y_training)
+        loss = model.backward(output_t, Y_training)
         loss_over_epochs_t.append(loss)
-        print(f'Output{output}')
-        output = model.forward(input = X_val)
-        val_mse_loss = np.mean((Y_val- output)**2)
+        # print(f'Output{output}')
+        output_v = model.forward(input = X_val)
+        val_mse_loss = np.mean((Y_val- output_v)**2)
         loss_over_epochs_v.append(val_mse_loss)
   
         print(f'training loss: {loss}\n')
         print(f'VALIDATION loss: {val_mse_loss}\n')
       
-      return loss_over_epochs_t, loss_over_epochs_v
+      return loss_over_epochs_t, loss_over_epochs_v, output_t
         
 
                     #  LEVEL 1 (DONE) 
 # X = np.array([[0], [1], [2], [3], [4]])
 # Y = np.array([[0], [1], [2], [3], [4]])
                     #  LEVEL 2 
-X = np.linspace(-5, 5, 100).reshape(-1, 1)  # 100 points from -5 to 5 shape 100, 1
-Y = X**2
+# X = np.linspace(-5, 5, 100).reshape(-1, 1)  # 100 points from -5 to 5 shape 100, 1
+# Y = min_max_normalize(X**2)
+#                      LEVEL 3
+X = np.linspace(-10, 10, 500).reshape(-1, 1)
+X = np.hstack([X, np.sin(X)])
+Y = min_max_normalize(np.sin(X[:, 0]) + 0.3 * np.cos(3 * X[:, 0]) + 0.1 * X[:, 0]**2)
+Y = Y.reshape(-1, 1)
 X_training, Y_training = X[:int(X.shape[0] * 0.8)], Y[:int(Y.shape[0] * 0.8)]
 X_val, Y_val = X[int(X.shape[0] * 0.8):], Y[int(Y.shape[0] * 0.8):]
+
+print(X.shape)
+print(Y.shape)
+# quit()
 
 # print(X.shape)
 # quit()
 
 
-model = hugo_2_0(loss = 'mse')
+model = hugo_2_0(loss = 'mse', weight_initialization= 'none')
 
 layer_I = model.Layer(model)
 layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 64, activation_function= 'leaky relu', is_input_layer = True, lr_update_method = 'Hugo_lr_bonus')
@@ -250,45 +274,45 @@ layer_0.set_layer(input_features = 64, neurons_num = X_training.shape[1], activa
 model.add_layer(layer_0, dense = 1) 
 
 
-model2 = hugo_2_0(loss = 'mse')
+model2 = hugo_2_0(loss = 'mse', weight_initialization= 'he')
 
 layer_I = model2.Layer(model2)
-layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 64, activation_function= 'leaky relu', is_input_layer = True, lr_update_method = 'none')
+layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 64, activation_function= 'leaky relu', is_input_layer = True, lr_update_method ='Hugo_lr_bonus')
 model2.add_layer(layer_I) 
 
 dense = model2.Layer(model2)
-dense.set_layer(input_features = 64, neurons_num = 64, activation_function= 'leaky relu', is_input_layer = False, lr_update_method = 'none')
-model2.add_layer(dense, dense = 1) 
+dense.set_layer(input_features = 64, neurons_num = 64, activation_function= 'leaky relu', is_input_layer = False, lr_update_method = 'Hugo_lr_bonus')
+model2.add_layer(dense, dense = 3) 
 
 layer_0 = model2.Layer(model2)
-layer_0.set_layer(input_features = 64, neurons_num = X_training.shape[1], activation_function= 'leaky relu', is_output_layer = True, lr_update_method = 'none')
+layer_0.set_layer(input_features = 64, neurons_num = Y_training.shape[1], activation_function= 'leaky relu', is_output_layer = True, lr_update_method = 'Hugo_lr_bonus')
 model2.add_layer(layer_0, dense = 1) 
 
 
 
-epochs = 100
-loss_over_epochs_t, loss_over_epochs_v = run_model(model, epochs, X_training, Y_training, X_val, Y_val, 'mse')
-loss_over_epochs_t2, loss_over_epochs_v2 = run_model(model2, epochs, X_training, Y_training, X_val, Y_val, 'mse')
-print('                A')
-print(f'training loss: {loss_over_epochs_t[-1]}')
-print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
+epochs = 300
+# loss_over_epochs_t, loss_over_epochs_v,output = run_model(model, epochs, X_training, Y_training, X_val, Y_val, 'mse')
+# print('                A')
+# print(f'training loss: {loss_over_epochs_t[-1]}')
+# print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
 
+loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model2, epochs, X_training, Y_training, X_val, Y_val, 'mse')
 print('                B')
 print(f'training loss: {loss_over_epochs_t2[-1]}')
 print(f'VALIDATION loss: {loss_over_epochs_v2[-1]}\n')
-
+model.check_layers_state()
 
 
 plt.figure(figsize=(12, 6))
-epochs = np.arange(1,101)
+epochs = np.arange(1, epochs + 1)
 
 
 # Training Loss
-plt.plot(epochs, loss_over_epochs_t, label='Train Loss - Net A', linestyle='--', color='blue')
+# plt.plot(epochs, loss_over_epochs_t, label='Train Loss - Net A', linestyle='--', color='blue')
 plt.plot(epochs, loss_over_epochs_t2, label='Train Loss - Net B', linestyle='--', color='green')
 
 # Validation Loss
-plt.plot(epochs, loss_over_epochs_v, label='Val Loss - Net A', linestyle='-', color='blue')
+# plt.plot(epochs, loss_over_epochs_v, label='Val Loss - Net A', linestyle='-', color='blue')
 plt.plot(epochs, loss_over_epochs_v2, label='Val Loss - Net B', linestyle='-', color='green')
 
 # Labels and Title
