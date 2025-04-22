@@ -44,11 +44,15 @@ def mse_loss(x, y):
 
     return loss, loss_derivative
 
-def none_w_initilial(neurons_num):
+def linear(*args):
     return 1
 
-def he(neurons_num):
-    return np.sqrt(2. / neurons_num)
+def he(*args):
+    return np.sqrt(2. / (args[1]))
+
+def xavier(*args):
+    limit = np.sqrt(6 / (args[0] + args[1]))
+    return np.random.uniform(-limit, limit, size=(args[0], args[1]))
 
 def min_max_normalize(data):
     return (data - np.min(data, axis = 0)) / (np.max(data, axis = 0) - np.min(data, axis=0) + 1e-8)
@@ -62,7 +66,7 @@ class hugo_2_0():
         self.loss_methods = {'mse': mse_loss}
         self.loss = loss
         self.lr = lr
-        self.weights_initializations = {'none' : none_w_initilial, 'he' : he}
+        self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
         self.weights_initialization = weight_initialization
         self.layers = []
         pass
@@ -102,9 +106,12 @@ class hugo_2_0():
         def set_layer(self, neurons_num,  input_features, activation_function, is_input_layer = False, is_output_layer = False, lr_update_method = 'none', weight_initilization = 'notchossed' ):
             if weight_initilization == 'notchossed':
                 self.weight_initilization = self.model.weights_initialization
-
+            else:
+                self.weight_initilization = weight_initilization
+            print(neurons_num)
+          
             # self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
-            self.layer_weights = np.random.randn(input_features,  neurons_num) * self.model.weights_initializations[self.weight_initilization](neurons_num)
+            self.layer_weights = np.random.randn(input_features,  neurons_num) * self.model.weights_initializations[self.weight_initilization](input_features, neurons_num)
             
             self.layer_bias = np.zeros(neurons_num,)
             self.layer_af_calc = self.model.activation_functions[activation_function]
@@ -195,6 +202,7 @@ class hugo_2_0():
         # mse_grad = (2 / y.shape[0]) * (x - y)
         grad = mse_grad
         grad = self.output_layer.backward_L(grad)
+        grad = np.clip(grad, -1, 1)
        
         for layer in reversed(self.layers):
             grad = layer.backward_L(grad)
@@ -217,16 +225,17 @@ class hugo_2_0():
            return output     
     
 
-def run_model(model, epochs, X_training, Y_training, X_val, Y_val, mse):
+def run_model(model, epochs, X_training, Y_training, X_val, Y_val):
       loss_over_epochs_t = []
       loss_over_epochs_v = [] 
       for i in range(epochs):
         print(f'EPOCH {i}')
         output_t = model.forward(input = X_training)
- 
         loss = model.backward(output_t, Y_training)
         loss_over_epochs_t.append(loss)
+
         # print(f'Output{output}')
+        
         output_v = model.forward(input = X_val)
         val_mse_loss = np.mean((Y_val- output_v)**2)
         loss_over_epochs_v.append(val_mse_loss)
@@ -240,26 +249,41 @@ def run_model(model, epochs, X_training, Y_training, X_val, Y_val, mse):
                     #  LEVEL 1 (DONE) 
 # X = np.array([[0], [1], [2], [3], [4]])
 # Y = np.array([[0], [1], [2], [3], [4]])
+
                     #  LEVEL 2 
 # X = np.linspace(-5, 5, 100).reshape(-1, 1)  # 100 points from -5 to 5 shape 100, 1
 # Y = min_max_normalize(X**2)
-#                      LEVEL 3
-X = np.linspace(-10, 10, 500).reshape(-1, 1)
-X = np.hstack([X, np.sin(X)])
-Y = min_max_normalize(np.sin(X[:, 0]) + 0.3 * np.cos(3 * X[:, 0]) + 0.1 * X[:, 0]**2)
-Y = Y.reshape(-1, 1)
+
+                    #  LEVEL 3
+# X = np.linspace(-10, 10, 500).reshape(-1, 1)
+# X = np.hstack([X, np.sin(X)])
+# Y = min_max_normalize(np.sin(X[:, 0]) + 0.3 * np.cos(3 * X[:, 0]) + 0.1 * X[:, 0]**2)
+# Y = Y.reshape(-1, 1)
+                    #  LEVEL 4
+# X = np.linspace(-10, 10, 500).reshape(-1, 1)
+# Y = np.piecewise(X.flatten(),
+#                  [X.flatten() < 0, X.flatten() >= 0],
+#                  [lambda x: np.sin(x) + np.random.normal(0, 0.1, x.shape),
+#                   lambda x: np.log1p(x) + np.random.normal(0, 0.1, x.shape)])
+# Y = min_max_normalize(Y.reshape(-1, 1))
+                    #  LEVEL 5
+
+X = np.linspace(-5, 5, 1000).reshape(-1, 1)
+Y = np.sin(5 * X) * np.cos(2 * X) + 0.1 * X
+
+Y = min_max_normalize(Y.reshape(-1, 1))
+
 X_training, Y_training = X[:int(X.shape[0] * 0.8)], Y[:int(Y.shape[0] * 0.8)]
 X_val, Y_val = X[int(X.shape[0] * 0.8):], Y[int(Y.shape[0] * 0.8):]
 
-print(X.shape)
-print(Y.shape)
+
 # quit()
 
 # print(X.shape)
 # quit()
 
 
-model = hugo_2_0(loss = 'mse', weight_initialization= 'none')
+model = hugo_2_0(loss = 'mse', weight_initialization= 'linear')
 
 layer_I = model.Layer(model)
 layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 64, activation_function= 'leaky relu', is_input_layer = True, lr_update_method = 'Hugo_lr_bonus')
@@ -277,26 +301,27 @@ model.add_layer(layer_0, dense = 1)
 model2 = hugo_2_0(loss = 'mse', weight_initialization= 'he')
 
 layer_I = model2.Layer(model2)
-layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 64, activation_function= 'leaky relu', is_input_layer = True, lr_update_method ='Hugo_lr_bonus')
+layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 32, activation_function= 'leaky relu', is_input_layer = True, lr_update_method ='none')
 model2.add_layer(layer_I) 
 
 dense = model2.Layer(model2)
-dense.set_layer(input_features = 64, neurons_num = 64, activation_function= 'leaky relu', is_input_layer = False, lr_update_method = 'Hugo_lr_bonus')
-model2.add_layer(dense, dense = 3) 
+dense.set_layer(input_features = 32, neurons_num = 32, activation_function= 'leaky relu', is_input_layer = False, lr_update_method = 'none')
+model2.add_layer(dense, dense = 10) 
 
 layer_0 = model2.Layer(model2)
-layer_0.set_layer(input_features = 64, neurons_num = Y_training.shape[1], activation_function= 'leaky relu', is_output_layer = True, lr_update_method = 'Hugo_lr_bonus')
+layer_0.set_layer(input_features = 32, neurons_num = Y_training.shape[1], activation_function= 'leaky relu', is_output_layer = True, lr_update_method = 'none',
+                  weight_initilization= 'xavier')
 model2.add_layer(layer_0, dense = 1) 
 
 
 
-epochs = 300
-# loss_over_epochs_t, loss_over_epochs_v,output = run_model(model, epochs, X_training, Y_training, X_val, Y_val, 'mse')
+epochs = 100
+# loss_over_epochs_t, loss_over_epochs_v,output = run_model(model, epochs, X_training, Y_training, X_val, Y_val)
 # print('                A')
 # print(f'training loss: {loss_over_epochs_t[-1]}')
 # print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
 
-loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model2, epochs, X_training, Y_training, X_val, Y_val, 'mse')
+loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model2, epochs, X_training, Y_training, X_val, Y_val)
 print('                B')
 print(f'training loss: {loss_over_epochs_t2[-1]}')
 print(f'VALIDATION loss: {loss_over_epochs_v2[-1]}\n')
