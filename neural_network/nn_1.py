@@ -57,11 +57,17 @@ def xavier(*args):
 def min_max_normalize(data):
     return (data - np.min(data, axis = 0)) / (np.max(data, axis = 0) - np.min(data, axis=0) + 1e-8)
 
+def dropout(data, alpha = 0.5):
+    dropout_mask = (np.random.rand(*data.shape) < alpha).astype(np.float32)
+    data = data * dropout_mask
+    return data
+
+
 
     
 
 class hugo_2_0():
-    def __init__(self, loss, weight_initialization = 'none', lr = 0.001):
+    def __init__(self, loss, weight_initialization = 'none', lr = 0.001, dropout = False, dropout_alpha = 0.5):
         self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
         self.loss_methods = {'mse': mse_loss}
         self.loss = loss
@@ -69,6 +75,8 @@ class hugo_2_0():
         self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
         self.weights_initialization = weight_initialization
         self.layers = []
+        self.dropout = dropout
+        self.dropout_alpha = dropout_alpha
         pass
 
     def info(self):
@@ -103,8 +111,8 @@ class hugo_2_0():
             self.model = model
             pass
 
-        def set_layer(self, neurons_num,  input_features, activation_function, is_input_layer = False, is_output_layer = False, lr_update_method = 'none', weight_initilization = 'notchossed' ):
-            if weight_initilization == 'notchossed':
+        def set_layer(self, neurons_num,  input_features, activation_function, is_input_layer = False, is_output_layer = False, lr_update_method = 'none', weight_initilization = None ):
+            if weight_initilization == None:
                 self.weight_initilization = self.model.weights_initialization
             else:
                 self.weight_initilization = weight_initilization
@@ -158,6 +166,9 @@ class hugo_2_0():
             # print(f'self.layer_weights \n {self.layer_weights}')
             # print(f'self.output \n {self.output}')
             # print('\n')
+            if self.model.dropout == True:
+                self.output = dropout(self.output)
+
             return self.output
         
         # def forward_weight_gradient(self, input):
@@ -225,7 +236,7 @@ class hugo_2_0():
            return output     
     
 
-def run_model(model, epochs, X_training, Y_training, X_val, Y_val):
+def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None):
       loss_over_epochs_t = []
       loss_over_epochs_v = [] 
       for i in range(epochs):
@@ -235,10 +246,13 @@ def run_model(model, epochs, X_training, Y_training, X_val, Y_val):
         loss_over_epochs_t.append(loss)
 
         # print(f'Output{output}')
-        
-        output_v = model.forward(input = X_val)
-        val_mse_loss = np.mean((Y_val- output_v)**2)
-        loss_over_epochs_v.append(val_mse_loss)
+        if isinstance(X_val, np.ndarray):
+          output_v = model.forward(input = X_val)
+          val_mse_loss = np.mean((Y_val- output_v)**2)
+          loss_over_epochs_v.append(val_mse_loss)
+        else:
+          val_mse_loss = 0
+          loss_over_epochs_v = [0]
   
         print(f'training loss: {loss}\n')
         print(f'VALIDATION loss: {val_mse_loss}\n')
@@ -250,82 +264,183 @@ def run_model(model, epochs, X_training, Y_training, X_val, Y_val):
 # X = np.array([[0], [1], [2], [3], [4]])
 # Y = np.array([[0], [1], [2], [3], [4]])
 
-                    #  LEVEL 2 
+                    #  LEVEL 2 (DONE) 
 # X = np.linspace(-5, 5, 100).reshape(-1, 1)  # 100 points from -5 to 5 shape 100, 1
 # Y = min_max_normalize(X**2)
 
-                    #  LEVEL 3
+                    #  LEVEL 3 (DONE) 
 # X = np.linspace(-10, 10, 500).reshape(-1, 1)
 # X = np.hstack([X, np.sin(X)])
 # Y = min_max_normalize(np.sin(X[:, 0]) + 0.3 * np.cos(3 * X[:, 0]) + 0.1 * X[:, 0]**2)
 # Y = Y.reshape(-1, 1)
-                    #  LEVEL 4
+                    #  LEVEL 4  (DONE) 
 # X = np.linspace(-10, 10, 500).reshape(-1, 1)
 # Y = np.piecewise(X.flatten(),
 #                  [X.flatten() < 0, X.flatten() >= 0],
 #                  [lambda x: np.sin(x) + np.random.normal(0, 0.1, x.shape),
 #                   lambda x: np.log1p(x) + np.random.normal(0, 0.1, x.shape)])
 # Y = min_max_normalize(Y.reshape(-1, 1))
-                    #  LEVEL 5
+                    #  LEVEL 5 (DONE) 
 
-X = np.linspace(-5, 5, 1000).reshape(-1, 1)
-Y = np.sin(5 * X) * np.cos(2 * X) + 0.1 * X
+# X = np.linspace(-5, 5, 1000).reshape(-1, 1)
+# Y = np.sin(5 * X) * np.cos(2 * X) + 0.1 * X
 
-Y = min_max_normalize(Y.reshape(-1, 1))
+# Y = min_max_normalize(Y.reshape(-1, 1))
 
-X_training, Y_training = X[:int(X.shape[0] * 0.8)], Y[:int(Y.shape[0] * 0.8)]
-X_val, Y_val = X[int(X.shape[0] * 0.8):], Y[int(Y.shape[0] * 0.8):]
+# X_training, Y_training = X[:int(X.shape[0] * 0.8)], Y[:int(Y.shape[0] * 0.8)]
+# X_val, Y_val = X[int(X.shape[0] * 0.8):], Y[int(Y.shape[0] * 0.8):]
 
+                    #  LEVEL 6 (DONE) 
+# Dane wejściowe (małe "obrazy" 3x3)
+# X = np.array([
+#     # Pozioma linia (klasa 0)
+#     [[0, 0, 0],
+#      [1, 1, 1],
+#      [0, 0, 0]],
+    
+#     # Pionowa linia (klasa 1)
+#     [[0, 1, 0],
+#      [0, 1, 0],
+#      [0, 1, 0]],
+    
+#     # Lewy górny róg (klasa 2)
+#     [[1, 0, 0],
+#      [1, 0, 0],
+#      [0, 0, 0]],
+    
+#     # Szum losowy (klasa 3)
+#     [[0, 1, 0],
+#      [1, 0, 1],
+#      [0, 1, 0]]
+# ], dtype=np.float32)     
+               
+                   #  LEVEL 7
+X = np.array([
+    # Cyfra "1" (klasa 0) — różne warianty
+    [[0, 0, 1, 0, 0, 0, 0],
+     [0, 0, 1, 0, 0, 0, 0],
+     [0, 0, 1, 0, 0, 0, 0],
+     [0, 0, 1, 0, 0, 0, 0],
+     [0, 0, 1, 0, 0, 0, 0],
+     [0, 0, 1, 0, 0, 0, 0],
+     [0, 0, 1, 0, 0, 0, 0]],
+    
+    [[0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0]],
+    
+    # Cyfra "7" (klasa 1) — różne warianty
+    [[1, 1, 1, 1, 1, 1, 1],
+     [0, 0, 0, 0, 0, 1, 0],
+     [0, 0, 0, 0, 1, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 1, 0, 0, 0, 0],
+     [0, 1, 0, 0, 0, 0, 0],
+     [1, 0, 0, 0, 0, 0, 0]],
+    
+    [[1, 1, 1, 1, 1, 1, 0],
+     [0, 0, 0, 0, 0, 1, 0],
+     [0, 0, 0, 0, 1, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 1, 0, 0, 0, 0],
+     [0, 1, 0, 0, 0, 0, 0],
+     [1, 0, 0, 0, 0, 0, 0]],
+    
+    # Litera "T" (klasa 2) — różne warianty
+    [[1, 1, 1, 1, 1, 1, 1],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0],
+     [0, 0, 0, 1, 0, 0, 0]],
+    
+    [[1, 1, 1, 1, 1, 1, 1],
+     [0, 0, 1, 0, 1, 0, 0],
+     [0, 0, 1, 0, 1, 0, 0],
+     [0, 0, 1, 0, 1, 0, 0],
+     [0, 0, 1, 0, 1, 0, 0],
+     [0, 0, 1, 0, 1, 0, 0],
+     [0, 0, 1, 0, 1, 0, 0]],
+    
+    # Szum losowy (klasa 3) — różne warianty
+    np.random.randint(0, 2, (7, 7)),
+    np.random.randint(0, 2, (7, 7))
+], dtype=np.float32)
 
+# Odpowiednie etykiety:
+Y = np.array([
+    0, 0,   # dwa warianty "1"
+    1, 1,   # dwa warianty "7"
+    2, 2,   # dwa warianty "T"
+    3, 3    # dwa szumy
+], dtype=np.int64)
+ 
+X = X.reshape(X.shape[0], -1)
+X_training = X  
+Y =  Y.reshape(-1,1)
+Y_training = Y
+
+# print(X_training.shape)
+# print(Y_training.shape)
 # quit()
 
-# print(X.shape)
-# quit()
 
 
-model = hugo_2_0(loss = 'mse', weight_initialization= 'linear')
+def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_update_method: list,  model_nn = hugo_2_0, weight_innitialization: list = [None, None, None]):
+        
 
-layer_I = model.Layer(model)
-layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 64, activation_function= 'leaky relu', is_input_layer = True, lr_update_method = 'Hugo_lr_bonus')
-model.add_layer(layer_I) 
+        layer_I = model_nn.Layer(model_nn)
+        layer_I.set_layer(input_features= X.shape[1], neurons_num = neurons_num, activation_function= activation_functions[0], is_input_layer = True, lr_update_method = lr_update_method[0])
+        model_nn.add_layer(layer_I) 
 
-dense = model.Layer(model)
-dense.set_layer(input_features = 64, neurons_num = 64, activation_function= 'leaky relu', is_input_layer = False, lr_update_method = 'Hugo_lr_bonus')
-model.add_layer(dense, dense = 1) 
+        dense = model_nn.Layer(model_nn)
+        dense.set_layer(input_features = neurons_num, neurons_num = neurons_num, activation_function= activation_functions[1], is_input_layer = False, lr_update_method = lr_update_method[1])
+        model_nn.add_layer(dense, dense = density) 
 
-layer_0 = model.Layer(model)
-layer_0.set_layer(input_features = 64, neurons_num = X_training.shape[1], activation_function= 'leaky relu', is_output_layer = True, lr_update_method = 'Hugo_lr_bonus')
-model.add_layer(layer_0, dense = 1) 
+        layer_0 = model_nn.Layer(model_nn)
+        layer_0.set_layer(input_features = 64, neurons_num = Y.shape[1], activation_function= activation_functions[2], is_output_layer = True, lr_update_method = lr_update_method[2])
+        model_nn.add_layer(layer_0, dense = 1) 
 
+# model_uno = hugo_2_0(loss = 'mse', weight_initialization= 'linear')
+# set_up_layers(X_training, Y_training, model_nn = model_uno,
+#                neurons_num = 64, density = 1,
+#                  activation_functions = ['leaky relu','leaky relu','sigmoid'], lr_update_method = ['Hugo_lr_bonus','Hugo_lr_bonus','Hugo_lr_bonus']
+#                  weight_innitialization= [None, None, 'xavier'] )
 
-model2 = hugo_2_0(loss = 'mse', weight_initialization= 'he')
+model_dos = hugo_2_0(loss = 'mse', weight_initialization= 'he', dropout = False)
 
-layer_I = model2.Layer(model2)
-layer_I.set_layer(input_features= X_training.shape[1], neurons_num = 32, activation_function= 'leaky relu', is_input_layer = True, lr_update_method ='none')
-model2.add_layer(layer_I) 
-
-dense = model2.Layer(model2)
-dense.set_layer(input_features = 32, neurons_num = 32, activation_function= 'leaky relu', is_input_layer = False, lr_update_method = 'none')
-model2.add_layer(dense, dense = 10) 
-
-layer_0 = model2.Layer(model2)
-layer_0.set_layer(input_features = 32, neurons_num = Y_training.shape[1], activation_function= 'leaky relu', is_output_layer = True, lr_update_method = 'none',
-                  weight_initilization= 'xavier')
-model2.add_layer(layer_0, dense = 1) 
-
+set_up_layers(X_training, Y_training, model_nn = model_dos,
+               neurons_num = 64, density = 1,
+                 activation_functions = ['leaky relu','leaky relu','leaky relu'], lr_update_method = ['none','none','none'], 
+                 weight_innitialization= [None, None, None])
 
 
 epochs = 100
 # loss_over_epochs_t, loss_over_epochs_v,output = run_model(model, epochs, X_training, Y_training, X_val, Y_val)
+
 # print('                A')
 # print(f'training loss: {loss_over_epochs_t[-1]}')
 # print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
 
-loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model2, epochs, X_training, Y_training, X_val, Y_val)
+loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training)
+# loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training, X_val, Y_val)
+print(f'output before rounding {output}')
+output = np.round(output).astype(int)
+accuracy = np.mean(output == Y_training)
+print(f' output after rounding\n{output}')
+print('\n')
+print(f'True data \n{Y_training}')
+
 print('                B')
 print(f'training loss: {loss_over_epochs_t2[-1]}')
+print(f'training accuracy: {accuracy}')
 print(f'VALIDATION loss: {loss_over_epochs_v2[-1]}\n')
-model.check_layers_state()
+model_dos.check_layers_state()
 
 
 plt.figure(figsize=(12, 6))
@@ -334,18 +449,18 @@ epochs = np.arange(1, epochs + 1)
 
 # Training Loss
 # plt.plot(epochs, loss_over_epochs_t, label='Train Loss - Net A', linestyle='--', color='blue')
-plt.plot(epochs, loss_over_epochs_t2, label='Train Loss - Net B', linestyle='--', color='green')
+# plt.plot(epochs, loss_over_epochs_t2, label='Train Loss - Net B', linestyle='--', color='green')
 
-# Validation Loss
-# plt.plot(epochs, loss_over_epochs_v, label='Val Loss - Net A', linestyle='-', color='blue')
-plt.plot(epochs, loss_over_epochs_v2, label='Val Loss - Net B', linestyle='-', color='green')
+# # Validation Loss
+# # plt.plot(epochs, loss_over_epochs_v, label='Val Loss - Net A', linestyle='-', color='blue')
+# plt.plot(epochs, loss_over_epochs_v2, label='Val Loss - Net B', linestyle='-', color='green')
 
-# Labels and Title
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.title('Training vs Validation Loss for Neural Networks')
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
+# # Labels and Title
+# plt.xlabel('Epochs')
+# plt.ylabel('Loss')
+# plt.title('Training vs Validation Loss for Neural Networks')
+# plt.legend()
+# plt.grid(True)
+# plt.tight_layout()
 
-plt.show()
+# plt.show()

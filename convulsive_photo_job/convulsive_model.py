@@ -74,7 +74,7 @@ class convulsive_model():
 
 
 
-# changes array from (180) to (3, 60) for exmaple 180 is input 60 is param
+# changes array from (180) to (3, 60) [180 = input, 60 = param]
 def d1_to_d2(input, param):
     window = param.size
     output = np.zeros((input.shape[0], input.shape[1] // window, *param.shape))
@@ -319,8 +319,8 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
                     weight_num = ((column_mask_inx + 1) + row_mask.size * row_mask_inx) + mask.size * (column_inx * (column.shape[0] - (mask.shape[0] - 1))) + (row_inx * mask.size)
                     weight_index = (channel_idx, (weight_num - 1) - (weight_num - 1) // weights.shape[1] * weights.shape[1])
                     # weight_index = ((weight_num - 1) // weights.shape[1], (weight_num - 1) - (weight_num - 1) // weights.shape[1] * weights.shape[1])
-                    print(f'weight_num{weight_num}')
-                    print(f'weight_index{weight_index}')
+                    # print(f'weight_num{weight_num}')
+                    # print(f'weight_index{weight_index}')
                     # print(f'weights.shape[1]{weights.shape[1]}')
                     
                     
