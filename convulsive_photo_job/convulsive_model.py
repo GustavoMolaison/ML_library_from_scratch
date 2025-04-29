@@ -18,19 +18,19 @@ class convulsive_model():
             self.param = param
             self.jump = jump
             # creating empty data we only wont shapes here altghou function needs actual arrays
-            inp_shape = np.zeros(self.inp.shape)
-            param_shape = np.zeros(param.shape)
+            
             # getting data after adding 0
-            input_pad_shape = input_pad_calc(inp_shape, param_shape)
+            input_pad_shape = input_pad_calc(self.inp, self.param)
             
             
-            self.kernels = get_kernels(param_shape, input_pad_shape)
-            print(self.kernels.shape)
-            # quit()
-
+            self.kernels = get_kernels(self.param, input_pad_shape)
+            
+            self.weights = np.tile(self.param, (self.kernels.shape[0],self.kernels.shape[1], self.kernels.shape[2], 1, 1))
+            
             # self.kernels_weights = np.random.uniform(0, 1, (self.kernels.shape[0], self.param.shape[0]))
-            self.kernels_weights = np.ones((self.kernels.shape[0],  self.kernels.shape[1] *  self.kernels.shape[2] * self.kernels.shape[3] * self.kernels.shape[3]))
-            print(self.kernels_weights.shape)
+            self.kernels_weights = np.reshape(self.weights, (self.kernels.shape[0],  self.kernels.shape[1] *  self.kernels.shape[2] * self.kernels.shape[3] * self.kernels.shape[4]))
+            
+            print(self.kernels_weights)
             # quit()
             
         
@@ -42,6 +42,7 @@ class convulsive_model():
         if inp.ndim != conv_layer.inp.ndim:
             print('___________________________ERROR___________________________ \n Dimension inconsencty, (forward_conv function)')
             quit()
+        conv_layer.inp = inp
         output, input_pad, conv_layer.kernels_data = conv_ld(inp, conv_layer.param, conv_layer.jump)
         conv_layer.input_pad = input_pad
         conv_layer.kernels = get_kernels(conv_layer.param, input_pad)
@@ -64,9 +65,10 @@ class convulsive_model():
         if inp.ndim != conv_layer.inp.ndim:
             print('___________________________ERROR___________________________ \n Dimension inconsencty, (Backward_conv function)')
             quit()
+        
         weight_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, conv_layer.kernels_weights, map = 'weight')
         input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, conv_layer.kernels_weights,  map = 'input')
-        i_der = input_derivative(inp, conv_layer.input_pad, weight_index, conv_layer.kernels_weights)
+        i_der = input_derivative(conv_layer.inp, conv_layer.input_pad, weight_index, conv_layer.kernels_weights, conv_layer.param)
         w_der = weight_derivative(inp, conv_layer.input_pad, input_index, conv_layer.kernels_weights)
         w_der_to_read = d1_to_d2(w_der, conv_layer.param)
         # changin weight deriative so each sample was a diffrent kernel cause its easier to read 
@@ -80,13 +82,29 @@ def d1_to_d2(input, param):
     output = np.zeros((input.shape[0], input.shape[1] // window, *param.shape))
     for channel_idx, channel in enumerate(input):
         channel_w_der = np.zeros((input.shape[1] // window, *param.shape))
-        for stride in range((input.shape[1] // window)):
-            channel_w_der[stride] = channel[stride : window + stride].reshape(param.shape)
-        output[channel_idx] = channel_w_der
     
+        for stride in range((input.shape[1] // window)):
+            channel_w_der[stride] = channel[stride * 9 : window + stride * 9].reshape(param.shape)
+        output[channel_idx] = channel_w_der
+   
     return output
        
        
+def unpad_info(inp, param, input_pad):
+    z_to_add_0 = inp.size - (inp.size - (param - 1))
+    index_to_skip = []
+    diff = 0
+    for i in range(z_to_add_0):
+       if i % 2 == 0:
+         index_to_skip.append(i - diff)
+         diff += 1
+       if i % 2 == 1:
+         index_to_skip.append(input_pad - diff)
+    if z_to_add_0 % 2 == 0:
+       index_to_add = z_to_add_0 //2
+    if z_to_add_0 % 2 == 1:
+       index_to_add = z_to_add_0 //2
+    return index_to_skip
 
 def _pad_ld(inp: ndarray, param_size: int) -> ndarray:
 
@@ -112,7 +130,7 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     channels_combined_list = []
     for inx, channel in enumerate(inp):
-        print('HALOOOOOOOOOOOOOOO')
+        
         
         
         
@@ -169,7 +187,7 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     input_pad  = input_pad_calc(inp, param)
     channels_amount = inp.shape[0]
 #   "+ input_pad.ndim" is making sure code works with multiple channels and singe channel so its just shape[].
-#   Two rows below calculate how many kernels will fit in shape[0] and [1].
+#   These two rows below calculates how many kernels will fit in shape[0] and [1].
     param_in_row = (input_pad.shape[(-2 + input_pad.ndim)] - (param.shape[0] - 1))
     param_in_columns =  (input_pad.shape[(-1 + input_pad.ndim)] - (param.shape[1] - 1))
     # Calculating how many kernels will be in our data.
@@ -225,8 +243,8 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
 
     for channel in input_pad:
       # # 3d array
-      # Calculating size of unpadded input data (input_pad.shape[0] - (param.shape[0] - 1), input_pad.shape[1] - (param.shape[1] - 1))
-      kernels =np.zeros((channel.shape[0] - (param.shape[0] - 1), channel.shape[1] - (param.shape[1] - 1), param.shape[0], param.shape[1]))
+      # Calculating size for our output data (input_pad.shape[0] - (param.shape[0] - 1), input_pad.shape[1] - (param.shape[1] - 1))
+      kernels =np.tile(param, (channel.shape[0] - (param.shape[0] - 1), channel.shape[1] - (param.shape[1] - 1), 1, 1))
       
       for column_inx, column in enumerate(channel.T):
         for row_inx, row in enumerate(channel):
@@ -239,6 +257,7 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
       kernels_combined.append(kernels)
    
     kernels_combined  = np.stack(kernels_combined)
+    print(kernels)
     
     
     return kernels_combined
@@ -333,51 +352,53 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
           
       channels_combined.append(weights_map) 
 
-    print(channels_combined[2])
-    print(weights.shape)
-    # quit()
+    
     
     weights_map = channels_combined
     return channels_combined
 
-def input_derivative(inp: ndarray, input_pad: ndarray, weight_index: map_input_weight_matrix, weights: ndarray) -> ndarray:
+def input_derivative(inp: ndarray, input_pad: ndarray, weight_index: map_input_weight_matrix, weights: ndarray, param: ndarray) -> ndarray:
     
-    
-    # print(weight_index)
+    #  calculating which rows and colums are padding we dont need their derivatives
+    rows_to_skip = unpad_info(inp, param.shape[0], input_pad[0].shape[0])
+    columns_to_skip = unpad_info(inp, param.shape[1], input_pad[0].shape[1])
+
     
     # Function calculates how many times mask interacted with certain input!
-    channels_combined = np.zeros(input_pad.shape)
+  
+    channels_combined = np.zeros(inp.shape)
+    
     for channel_idx, (channel_weight_index, channel_input) in enumerate(zip(weight_index, input_pad)):
-      input_gradients_list = []
+      input_gradients = np.zeros(inp[0].shape)
+      rows_skipped = 0
+      columns_skipped = 0
       for inx_row, row in enumerate(channel_input):
-        input_gradients = np.zeros(row.shape)
-        for index_column in np.ndindex(row.shape):
-          #   print(channel_index)
-           
-            
-         
-          
-            weights_indexes = channel_weight_index[inx_row,  index_column[0]]
-            # getting weights conntected to input we work with currently
+        if inx_row in rows_to_skip:
+           rows_skipped += 1
+           continue
+        
+        for inx_column, index_column in enumerate(row):
+            if inx_column in columns_to_skip:
+               columns_skipped += 1
+              
+               continue                               
+  
+            weights_indexes = channel_weight_index[inx_row,  inx_column]
             inputs_weights = [weights[*i] for i in weights_indexes]
-      
-         
+            
+        
+                  
             #  here gradient of kernel is one because we are only adding them and its fairly simple
             gradient = np.sum(inputs_weights)
-            # print(gradient)
-            input_gradients[*index_column] = gradient
+            input_gradients[inx_row - len(rows_to_skip) //2, inx_column - len(columns_to_skip) //2] = gradient
+            
+
+      channels_combined[channel_idx] =  input_gradients
     
-
-        input_gradients_list.append(input_gradients) 
-      print(channel_idx)
-      # quit()
-      channels_combined[channel_idx] = np.array(input_gradients_list)
-    #   input_gradients_real = np.array(input_gradients_list)
-
-      input_gradients_real = channels_combined
-    print(input_gradients_real)
-    # quit()
-    return input_gradients_real
+    
+    return channels_combined     
+    
+        
 
 def weight_derivative(inp: ndarray, input_pad: ndarray, input_index: map_input_weight_matrix, weights: ndarray)  -> ndarray:
     
@@ -403,13 +424,14 @@ def weight_derivative(inp: ndarray, input_pad: ndarray, input_index: map_input_w
             # weights_inputs = [channel[row, column] for row, column in input_indexes] - old version
             rows, cols = zip(*input_indexes)
             weights_inputs = channel[rows, cols]
-
+            
           #   Here we are just adding inputs cause our operation is basiclt weight x input (for now we dont work with dense network at all)
             gradient = np.sum(weights_inputs)
+            
+            
             # filling our np.zeros template
             weight_gradients[*index] = gradient
             
-       
     
     return weight_gradients
 
@@ -500,12 +522,11 @@ model = convulsive_model()
 def convulsive_input_output(input: ndarray, model):
   output_final = np.zeros(input.shape)
   sum_list = []
-  input_der_list = []
-  weight_der_list = []
+  input_grads = []
+  param_grads = []
 
   for sample_idx, sample in enumerate(input):
-    print(sample)
-    # quit()
+
     conv_1 = model.conv_layer(inp = sample, param = param_1d, jump = 0)
     output, pad_input = model.forward_conv(sample, conv_1)
 
@@ -513,21 +534,40 @@ def convulsive_input_output(input: ndarray, model):
     sum_list.append(sum)
 
     i_der, w_der = model.backward_conv(output, conv_1)
-    input_der_list.append(i_der)
-    weight_der_list.append(w_der)
+    input_grads.append(i_der)
+    param_grads.append(w_der)
 
     flatten = output
     output_final[sample_idx] = flatten
-  
-  return output_final, sum_list, input_der_list, weight_der_list
-model = convulsive_model()
-output_final, sum_list, input_der_list, weight_der_list = convulsive_input_output(input_1d, model)
 
-print('END')
-print(output_final)
-# print(sum_list)
-# print(input_der_list)
-# print(weight_der_list[0].shape)
+
+  
+  param_grads = sum_param_gradients(param_grads)
+  model.param_grads = param_grads
+  model.input_grads = input_grads
+  # input_grads = np.sum(sample for sample in input_der_list)
+
+  return output_final, sum_list, input_grads, param_grads
+
+def sum_param_gradients(sample_derivative_list: list) -> ndarray:
+    grads = np.zeros((sample_derivative_list[0].shape[0], sample_derivative_list[0].shape[2], sample_derivative_list[0].shape[3]))
+    for sample_idx, sample in enumerate(sample_derivative_list):
+        grad = np.sum(sample, axis = 1)
+        grads += grad
+
+    return grads
+  
+model = convulsive_model()
+output_final, sum_list, input_grads, param_grads = convulsive_input_output(input_1d, model)
+
+# print('END')
+# print(output_final)
+# print('END')
+print(sum_list)
+print(input_grads)
+print(param_grads)
+
+
 
 
 
