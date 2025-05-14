@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import ndarray
 
-class convulsive_model():
+class convolutional_model():
     def __init__(self):
         
         pass
@@ -17,21 +17,23 @@ class convulsive_model():
             self.inp = inp
             self.param = param
             self.jump = jump
-            # creating empty data we only wont shapes here altghou function needs actual arrays
             
-            # getting data after adding 0
+            
+            # getting padded version of data
             input_pad_shape = input_pad_calc(self.inp, self.param)
             
-            
+            # getting kernels based on padded input (weights * param)
             self.kernels = get_kernels(self.param, input_pad_shape)
             
+            # weights sorted by channels and kernels (channels, inp.shape[0], inp.shape[1], param.shape[0], param.shape[1])
             self.weights = np.tile(self.param, (self.kernels.shape[0],self.kernels.shape[1], self.kernels.shape[2], 1, 1))
             
-            # self.kernels_weights = np.random.uniform(0, 1, (self.kernels.shape[0], self.param.shape[0]))
+            
+            # weights sorted only by channels (3, number of weights for channel)
             self.kernels_weights = np.reshape(self.weights, (self.kernels.shape[0],  self.kernels.shape[1] *  self.kernels.shape[2] * self.kernels.shape[3] * self.kernels.shape[4]))
             
-            print(self.kernels_weights)
-            # quit()
+            
+           
             
         
         def get_info(self):
@@ -42,12 +44,16 @@ class convulsive_model():
         if inp.ndim != conv_layer.inp.ndim:
             print('___________________________ERROR___________________________ \n Dimension inconsencty, (forward_conv function)')
             quit()
+        # Saving layer frist input
         conv_layer.inp = inp
+        # Calculating new values after aplying kernels to padded data
         output, input_pad, conv_layer.kernels_data = conv_ld(inp, conv_layer.param, conv_layer.jump)
+        # Saving layer frist padded input
         conv_layer.input_pad = input_pad
+        # Getting kernels based on padded input 
         conv_layer.kernels = get_kernels(conv_layer.param, input_pad)
-        # print(conv_layer.kernels.shape)
-        # quit()
+        
+        
         
         
     
@@ -65,13 +71,16 @@ class convulsive_model():
         if inp.ndim != conv_layer.inp.ndim:
             print('___________________________ERROR___________________________ \n Dimension inconsencty, (Backward_conv function)')
             quit()
-        
+        # mapping to what input each weight is connected(returns dict)
         weight_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, conv_layer.kernels_weights, map = 'weight')
+        # mapping to what weight each input is connected(returns dict)
         input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, conv_layer.kernels_weights,  map = 'input')
+        # calculates how each input influence the output
         i_der = input_derivative(conv_layer.inp, conv_layer.input_pad, weight_index, conv_layer.kernels_weights, conv_layer.param)
+        # calculates how each weight thus param influence the output
         w_der = weight_derivative(inp, conv_layer.input_pad, input_index, conv_layer.kernels_weights)
-        w_der_to_read = d1_to_d2(w_der, conv_layer.param)
         # changin weight deriative so each sample was a diffrent kernel cause its easier to read 
+        w_der_to_read = d1_to_d2(w_der, conv_layer.param)
         return i_der, w_der_to_read
 
 
@@ -257,7 +266,7 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
       kernels_combined.append(kernels)
    
     kernels_combined  = np.stack(kernels_combined)
-    print(kernels)
+    
     
     
     return kernels_combined
@@ -386,6 +395,7 @@ def input_derivative(inp: ndarray, input_pad: ndarray, weight_index: map_input_w
             weights_indexes = channel_weight_index[inx_row,  inx_column]
             inputs_weights = [weights[*i] for i in weights_indexes]
             
+            
         
                   
             #  here gradient of kernel is one because we are only adding them and its fairly simple
@@ -395,7 +405,7 @@ def input_derivative(inp: ndarray, input_pad: ndarray, weight_index: map_input_w
 
       channels_combined[channel_idx] =  input_gradients
     
-    
+   
     return channels_combined     
     
         
@@ -513,26 +523,32 @@ param_1d = np.array([[1,1,1],
                      [1,1,1]
                      ])
 
-# input, pad_inp = conv_ld(input_1d, param_1d)
-# x = map_input_weight_matrix(input, param_1d, pad_inp, map = 'input')
-# print(x)
-# quit()
 
-model = convulsive_model()
-def convulsive_input_output(input: ndarray, model):
+
+model = convolutional_model()
+def convolutional_input_output(input: ndarray, param: ndarray, model):
   output_final = np.zeros(input.shape)
   sum_list = []
   input_grads = []
   param_grads = []
 
   for sample_idx, sample in enumerate(input):
-
-    conv_1 = model.conv_layer(inp = sample, param = param_1d, jump = 0)
+                        #  conv_layer() 
+    # I: Creating padded data
+    #II: Creating kernels
+   #III: Creating weights based on param
+    conv_1 = model.conv_layer(inp = sample, param = param_1d, jump = 0) 
+    # ---------------------------------------------------------------------
+                        # forward_conv()
+    # I: Calculating new values by applying kernels to padded data 
+    # II: Recreating kernels to make sure it matches real data              
     output, pad_input = model.forward_conv(sample, conv_1)
 
-    sum = model.output_sum_basic_ver(output)
-    sum_list.append(sum)
-
+    # sum = model.output_sum_basic_ver(output)
+    # sum_list.append(sum)
+                        # backward_conv()
+    # I Maping weights and inptuts relations
+    #II Calculating derivarives of both inputs and params
     i_der, w_der = model.backward_conv(output, conv_1)
     input_grads.append(i_der)
     param_grads.append(w_der)
@@ -557,15 +573,16 @@ def sum_param_gradients(sample_derivative_list: list) -> ndarray:
 
     return grads
   
-model = convulsive_model()
-output_final, sum_list, input_grads, param_grads = convulsive_input_output(input_1d, model)
+model = convolutional_model()
+output_final, sum_list, input_grads, param_grads = convolutional_input_output(input_1d, param_1d, model)
 
 # print('END')
 # print(output_final)
 # print('END')
-print(sum_list)
+# print(sum_list)
 print(input_grads)
-print(param_grads)
+# print(param_grads)
+
 
 
 
