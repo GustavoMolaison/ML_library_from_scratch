@@ -77,12 +77,23 @@ Y_training = Y
 
 hugo = Hugo(loss = 'mse', weight_initialization= 'he', dropout = False)
 
-hugo.set_layers(X_training, Y_training, 
+hugo.set_layers(X = X_training, Y = Y_training,  model_nn = hugo.model,
                  neurons_num = 64, density = 1,
                  activation_functions = ['leaky relu','leaky relu','leaky relu'], lr_update_method = ['none','none','none'], 
                  weight_innitialization= [None, None, None])
 
-loss_over_epochs_t, loss_over_epochs_v, output = hugo.run(100, X_training, Y_training)
+
+
+
+loss_over_epochs_t, loss_over_epochs_v, output = hugo.run(model_nn = hugo.model, epochs = 100, X = X_training, Y = Y_training,  )
+
+layers = hugo.model.layers
+for i  in range(len(layers)):
+    for w in range(len(layers[i].weights_ac_epo) - 1):
+     if (layers[i].weights_ac_epo[w] == layers[i].weights_ac_epo[w + 1]).all:
+        print('WEIGHTS ARE THE SAME')
+    # print([np.mean(grad) for grad in layer.input_grads])
+quit()
 
 print(output)
 output = np.round(output).astype(int)

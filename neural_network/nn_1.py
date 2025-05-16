@@ -117,7 +117,7 @@ class hugo_2_0():
             else:
                 self.weight_initilization = weight_initilization
             
-          
+            
             # self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
             self.layer_weights = np.random.randn(input_features,  neurons_num) * self.model.weights_initializations[self.weight_initilization](input_features, neurons_num)
             
@@ -129,6 +129,8 @@ class hugo_2_0():
             self.dead_neurons = False
             self.lr_bonus = 0
             self.lr_update_method = lr_update_method
+            self.input_grads = []
+            self.weights_ac_epo = []
             
 
     
@@ -160,14 +162,32 @@ class hugo_2_0():
             # print(f'self.weight_gradient: {self.weight_gradient.shape}')
             # print(f'self.layer_weights: {self.layer_weights.shape}')
             grad = grad * self.af_gradient
-            # quit()
+            
             layer_weight_grad = np.dot(self.weight_gradient.T, grad)
             
             layer_bias_grad = np.sum(grad * self.bias_gradient, axis = 0)
             layer_input_grad = np.dot(grad, self.layer_weights.T) 
-            print(layer_input_grad)
-            #  gradient is how current layer affects loss, if we multiply it by weights we get how previous layer affected the loss cause input is multiplied by weights
             
+            #  gradient is how current layer affects loss, if we multiply it by weights we get how previous layer affected the loss cause input is multiplied by weights
+           
+
+            # Debuggin tools
+            if hasattr(self, 'old_weights'):
+                if (self.old_weights == self.layer_weights.T).all():
+                    print("-----------------------\n" 
+                          "WEIGHTS ARE THE SAME")
+                    
+            if hasattr(self, 'old_lig'):
+                if (self.old_lig == layer_input_grad).all():
+                    print("-----------------------\n" 
+                          "INPUT GRADIENT DIDNT CHANGE")
+            
+            self.old_lig = layer_input_grad.copy()
+            self.old_weights = self.layer_weights.T.copy()
+            
+            # saving data
+            self.input_grads.append(layer_input_grad)
+            self.weights_ac_epo.append(self.layer_weights)
         
             self.layer_weights -= layer_weight_grad * (self.model.lr + self.lr_update(layer_weight_grad))
             self.layer_bias -= layer_bias_grad * (self.model.lr + self.lr_update(layer_bias_grad))
@@ -189,7 +209,6 @@ class hugo_2_0():
             
 
     def backward(self, x, y):
-        print('HELLO')
         mse_loss, mse_grad = self.loss_methods[self.loss](x, y)
         grad = mse_grad
         grad = self.output_layer.backward_L(grad)
@@ -317,7 +336,7 @@ Y_training = Y
 
 
 
-def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_update_method: list,  model_nn = hugo_2_0, weight_innitialization: list = [None, None, None]):
+def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_update_method: list,  model_nn, weight_innitialization: list = [None, None, None]):
         
 
         layer_I = model_nn.Layer(model_nn)
@@ -341,14 +360,14 @@ class Hugo():
     def __init__(self, loss, weight_initialization, dropout):
         self.model = hugo_2_0(loss, weight_initialization, dropout)
 
-    def set_layers(self, X, Y, neurons_num, density, activation_functions: list, lr_update_method: list, weight_innitialization: list):
-        self.set_up_layers = set_up_layers(X_training, Y_training, model_nn = self.model,
+    def set_layers(self, model_nn, X, Y, neurons_num, density, activation_functions: list, lr_update_method: list, weight_innitialization: list):
+        self.set_up_layers = set_up_layers(X_training, Y_training, model_nn = model_nn,
                  neurons_num = neurons_num, density = density,
                  activation_functions = activation_functions, lr_update_method = lr_update_method, 
                  weight_innitialization= weight_innitialization)
         
-    def run(self, epochs, X, Y):
-        self.run_model = run_model(self.model, epochs, X, Y)
+    def run(self, model_nn, epochs, X, Y):
+        self.run_model = run_model(model_nn, epochs, X, Y)
         return self.run_model
 
 if __name__ == "__main__":
@@ -362,7 +381,7 @@ if __name__ == "__main__":
 
 
 
-     epochs = 100
+     epochs = 10
      # loss_over_epochs_t, loss_over_epochs_v,output = run_model(model, epochs, X_training, Y_training, X_val, Y_val)
 
      # print('                A')
