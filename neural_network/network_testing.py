@@ -90,10 +90,10 @@ loss_over_epochs_t, loss_over_epochs_v, output = hugo.run(model_nn = hugo.model,
 layers = hugo.model.layers
 for i  in range(len(layers)):
     for w in range(len(layers[i].weights_ac_epo) - 1):
-     if (layers[i].weights_ac_epo[w] == layers[i].weights_ac_epo[w + 1]).all:
+     if (layers[i].weights_ac_epo[w] == layers[i].weights_ac_epo[w + 1]).all():
         print('WEIGHTS ARE THE SAME')
     # print([np.mean(grad) for grad in layer.input_grads])
-quit()
+# quit()
 
 print(output)
 output = np.round(output).astype(int)

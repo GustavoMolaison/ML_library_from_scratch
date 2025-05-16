@@ -525,7 +525,7 @@ param_1d = np.array([[1,1,1],
 
 
 
-model = convolutional_model()
+# model = convolutional_model()
 def convolutional_input_output(input: ndarray, param: ndarray, model):
   output_final = np.zeros(input.shape)
   sum_list = []
