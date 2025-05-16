@@ -79,70 +79,30 @@ def value_s(*args):
             raise TypeError("Value must be a string, not {}".format(type(v).__name__))
       
 
-
-
-    
-
-class hugo_2_0():
-    def __init__(self, loss, weight_initialization = 'none', lr = 0.001, dropout = False, dropout_alpha = 0.5):
-        value_f(lr, dropout_alpha)
-        value_s(loss, weight_initialization)
-        value_b(dropout)
-        self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
-        self.loss_methods = {'mse': mse_loss}
-        self.loss = loss
-        self.lr = lr
-        self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
-        self.weights_initialization = weight_initialization
-        self.layers = []
-        self.dropout = dropout
-        self.dropout_alpha = dropout_alpha
-        pass
-
-    def info(self):
-        print(self.layers[-1].layer_weights)
-    
-    def modify_model(self, lr = 0.001):
-        self.lr =lr
-    
-   
-       
-        
-
-    def add_layer(self, layer, dense = 1):
-      
-        if layer.is_output_layer == True:
-           self.output_layer = layer
- 
-        
-        else:   
-            for density in range(dense):
-               self.layers.append(layer)
-    
-    def check_layers_state(self):
-        dead_neuronds_indices = [i for i, layer in enumerate(self.layers) if layer.dead_neurons]
-        print('Indices of layers consisiting dead neurons')
-        print(dead_neuronds_indices)
-
-
-
-    class Layer():
-        def __init__(self, model):
+class Layer():
+        def __init__(self, model = None):
             self.model = model
+            self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
+            self.loss_methods = {'mse': mse_loss}
+            # self.loss = loss
+            # self.lr = lr
+            self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
             pass
 
-        def set_layer(self, neurons_num,  input_features, activation_function, is_input_layer = False, is_output_layer = False, lr_update_method = 'none', weight_initilization = None ):
-            if weight_initilization == None:
-                self.weight_initilization = self.model.weights_initialization
+        def set_layer(self, neurons_num,  input_features, activation_function, weight_initialization, is_input_layer = False, is_output_layer = False, lr_update_method = 'none'):
+
+            if weight_initialization == None and self.model != None:
+                self.weight_initialization = self.model.weights_initialization
             else:
-                self.weight_initilization = weight_initilization
+                self.weight_initialization = weight_initialization
+            
             
             
             # self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
-            self.layer_weights = np.random.randn(input_features,  neurons_num) * self.model.weights_initializations[self.weight_initilization](input_features, neurons_num)
+            self.layer_weights = np.random.randn(input_features,  neurons_num) * self.weights_initializations[self.weight_initialization](input_features, neurons_num)
             
             self.layer_bias = np.zeros(neurons_num,)
-            self.layer_af_calc = self.model.activation_functions[activation_function]
+            self.layer_af_calc = self.activation_functions[activation_function]
             # self.layer_weights = np.array([[3]], dtype= 'float64')
             self.is_input_layer = is_input_layer
             self.is_output_layer = is_output_layer
@@ -236,7 +196,53 @@ class hugo_2_0():
               self.lr_bonus += np.mean(np.abs(grad))  * self.model.lr**2 * 0.1
               self.lr_bonus = np.clip(self.lr_bonus, -self.model.lr, self.model.lr)
               return self.lr_bonus
+
+    
+
+class hugo_2_0():
+    def __init__(self, loss, weight_initialization = 'none', lr = 0.001, dropout = False, dropout_alpha = 0.5):
+        value_f(lr, dropout_alpha)
+        value_s(loss, weight_initialization)
+        value_b(dropout)
+        self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
+        self.loss_methods = {'mse': mse_loss}
+        self.loss = loss
+        self.lr = lr
+        self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
+        self.weights_initialization = weight_initialization
+        self.layers = []
+        self.dropout = dropout
+        self.dropout_alpha = dropout_alpha
+        pass
+
+    def info(self):
+        print(self.layers[-1].layer_weights)
+    
+    def modify_model(self, lr = 0.001):
+        self.lr =lr
+    
+   
+       
         
+
+    def add_layer(self, layer, dense = 1):
+      
+        if layer.is_output_layer == True:
+           self.output_layer = layer
+ 
+        
+        else:   
+            for density in range(dense):
+               self.layers.append(layer)
+    
+    def check_layers_state(self):
+        dead_neuronds_indices = [i for i, layer in enumerate(self.layers) if layer.dead_neurons]
+        print('Indices of layers consisiting dead neurons')
+        print(dead_neuronds_indices)
+
+
+
+    
             
             
 
@@ -368,19 +374,19 @@ Y_training = Y
 
 
 
-def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_update_method: list,  model_nn, weight_innitialization: list = [None, None, None]):
+def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_update_method: list,  model_nn, weight_initialization: list = [None, None, None]):
         
 
-        layer_I = model_nn.Layer(model_nn)
-        layer_I.set_layer(input_features= X.shape[1], neurons_num = neurons_num, activation_function= activation_functions[0], is_input_layer = True, lr_update_method = lr_update_method[0])
+        layer_I = Layer(model = model_nn)
+        layer_I.set_layer(input_features= X.shape[1], neurons_num = neurons_num, activation_function= activation_functions[0], weight_initialization = weight_initialization[0], is_input_layer = True, lr_update_method = lr_update_method[0])
         model_nn.add_layer(layer_I) 
 
-        dense = model_nn.Layer(model_nn)
-        dense.set_layer(input_features = neurons_num, neurons_num = neurons_num, activation_function= activation_functions[1], is_input_layer = False, lr_update_method = lr_update_method[1])
+        dense = Layer(model = model_nn)
+        dense.set_layer(input_features = neurons_num, neurons_num = neurons_num, activation_function= activation_functions[1], weight_initialization = weight_initialization[1], is_input_layer = False, lr_update_method = lr_update_method[1])
         model_nn.add_layer(dense, dense = density) 
 
-        layer_0 = model_nn.Layer(model_nn)
-        layer_0.set_layer(input_features = 64, neurons_num = Y.shape[1], activation_function= activation_functions[2], is_output_layer = True, lr_update_method = lr_update_method[2])
+        layer_0 = Layer(model = model_nn)
+        layer_0.set_layer(input_features = 64, neurons_num = Y.shape[1], activation_function= activation_functions[2], weight_initialization = weight_initialization[2], is_output_layer = True, lr_update_method = lr_update_method[2])
         model_nn.add_layer(layer_0, dense = 1) 
 
 # model_uno = hugo_2_0(loss = 'mse', weight_initialization= 'linear')
@@ -392,11 +398,11 @@ class Hugo():
     def __init__(self, loss, weight_initialization, dropout):
         self.model = hugo_2_0(loss = loss, weight_initialization = weight_initialization, dropout = dropout)
 
-    def set_layers(self, model_nn, X, Y, neurons_num, density, activation_functions: list, lr_update_method: list, weight_innitialization: list):
+    def set_layers(self, model_nn, X, Y, neurons_num, density, activation_functions: list, lr_update_method: list, weight_initialization: list):
         self.set_up_layers = set_up_layers(X_training, Y_training, model_nn = model_nn,
                  neurons_num = neurons_num, density = density,
                  activation_functions = activation_functions, lr_update_method = lr_update_method, 
-                 weight_innitialization= weight_innitialization)
+                 weight_initialization= weight_initialization)
         
     def run(self, model_nn, epochs, X, Y):
         self.run_model = run_model(model_nn, epochs, X, Y)
@@ -408,12 +414,12 @@ if __name__ == "__main__":
      set_up_layers(X_training, Y_training, model_nn = model_dos,
                  neurons_num = 64, density = 1,
                  activation_functions = ['leaky relu','leaky relu','leaky relu'], lr_update_method = ['none','none','none'], 
-                 weight_innitialization= [None, None, None])
+                 weight_initialization= ['he', 'he', 'he'])
 
 
 
 
-     epochs = 10
+     epochs = 100
      # loss_over_epochs_t, loss_over_epochs_v,output = run_model(model, epochs, X_training, Y_training, X_val, Y_val)
 
      # print('                A')
