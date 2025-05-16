@@ -116,7 +116,7 @@ class hugo_2_0():
                 self.weight_initilization = self.model.weights_initialization
             else:
                 self.weight_initilization = weight_initilization
-            print(neurons_num)
+            
           
             # self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
             self.layer_weights = np.random.randn(input_features,  neurons_num) * self.model.weights_initializations[self.weight_initilization](input_features, neurons_num)
@@ -129,43 +129,21 @@ class hugo_2_0():
             self.dead_neurons = False
             self.lr_bonus = 0
             self.lr_update_method = lr_update_method
-            # quit()
-            # print(self.layer_weights)
-            # quit()
+            
 
     
         def forward_L(self, input):
             self.input = input.T
-            # input = input.T
+
             if np.any(self.layer_weights == 0):
                 self.dead_neurons = True
                 print('Dead neurons appeared')
                
-            # print(input.shape)
-            # print(self.layer_weights.shape)
-            # quit()
+          
             self.output, self.weight_gradient  = dot_calc(input, self.layer_weights)
             self.output, self.bias_gradient  = bias_calc(self.output, self.layer_bias)
             self.output, self.af_gradient = self.layer_af_calc(self.output)
-            # print(f'self.output{self.output.shape}')
-            # print(f'self.af_gradient{self.af_gradient.shape}')
-            # print(f'self.weight_gradient{self.weight_gradient.shape}')
-         
-
-            # self.weight_gradient = self.weight_gradient * self.af_gradient
-            # self.bias_gradient = self.bias_gradient * self.af_gradient
-            # quit()
-            # print(f'output: {self.output}\n')
             
-            # print(f'self.weight_gradient.shape{self.weight_gradient.shape}')
-            # quit()
-
-            # self.weight_gradient = input
-            # self.bias_gradient = 1
-            # print(f'self.input \n {self.input}')
-            # print(f'self.layer_weights \n {self.layer_weights}')
-            # print(f'self.output \n {self.output}')
-            # print('\n')
             if self.model.dropout == True:
                 self.output = dropout(self.output)
 
@@ -184,13 +162,16 @@ class hugo_2_0():
             grad = grad * self.af_gradient
             # quit()
             layer_weight_grad = np.dot(self.weight_gradient.T, grad)
+            
             layer_bias_grad = np.sum(grad * self.bias_gradient, axis = 0)
             layer_input_grad = np.dot(grad, self.layer_weights.T) 
+            print(layer_input_grad)
             #  gradient is how current layer affects loss, if we multiply it by weights we get how previous layer affected the loss cause input is multiplied by weights
             
         
             self.layer_weights -= layer_weight_grad * (self.model.lr + self.lr_update(layer_weight_grad))
             self.layer_bias -= layer_bias_grad * (self.model.lr + self.lr_update(layer_bias_grad))
+           
             
             
             return layer_input_grad
@@ -208,17 +189,15 @@ class hugo_2_0():
             
 
     def backward(self, x, y):
+        print('HELLO')
         mse_loss, mse_grad = self.loss_methods[self.loss](x, y)
-        # mse_loss = np.mean((y - x)**2)
-        # mse_grad = (2 / y.shape[0]) * (x - y)
         grad = mse_grad
         grad = self.output_layer.backward_L(grad)
         grad = np.clip(grad, -1, 1)
        
         for layer in reversed(self.layers):
             grad = layer.backward_L(grad)
-            # quit()
-        # quit()
+           
         return mse_loss    
     
     def forward(self, input):
@@ -260,59 +239,6 @@ def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None)
       return loss_over_epochs_t, loss_over_epochs_v, output_t
         
 
-                    #  LEVEL 1 (DONE) 
-# X = np.array([[0], [1], [2], [3], [4]])
-# Y = np.array([[0], [1], [2], [3], [4]])
-
-                    #  LEVEL 2 (DONE) 
-# X = np.linspace(-5, 5, 100).reshape(-1, 1)  # 100 points from -5 to 5 shape 100, 1
-# Y = min_max_normalize(X**2)
-
-                    #  LEVEL 3 (DONE) 
-# X = np.linspace(-10, 10, 500).reshape(-1, 1)
-# X = np.hstack([X, np.sin(X)])
-# Y = min_max_normalize(np.sin(X[:, 0]) + 0.3 * np.cos(3 * X[:, 0]) + 0.1 * X[:, 0]**2)
-# Y = Y.reshape(-1, 1)
-                    #  LEVEL 4  (DONE) 
-# X = np.linspace(-10, 10, 500).reshape(-1, 1)
-# Y = np.piecewise(X.flatten(),
-#                  [X.flatten() < 0, X.flatten() >= 0],
-#                  [lambda x: np.sin(x) + np.random.normal(0, 0.1, x.shape),
-#                   lambda x: np.log1p(x) + np.random.normal(0, 0.1, x.shape)])
-# Y = min_max_normalize(Y.reshape(-1, 1))
-                    #  LEVEL 5 (DONE) 
-
-# X = np.linspace(-5, 5, 1000).reshape(-1, 1)
-# Y = np.sin(5 * X) * np.cos(2 * X) + 0.1 * X
-
-# Y = min_max_normalize(Y.reshape(-1, 1))
-
-# X_training, Y_training = X[:int(X.shape[0] * 0.8)], Y[:int(Y.shape[0] * 0.8)]
-# X_val, Y_val = X[int(X.shape[0] * 0.8):], Y[int(Y.shape[0] * 0.8):]
-
-                    #  LEVEL 6 (DONE) 
-# Dane wejściowe (małe "obrazy" 3x3)
-# X = np.array([
-#     # Pozioma linia (klasa 0)
-#     [[0, 0, 0],
-#      [1, 1, 1],
-#      [0, 0, 0]],
-    
-#     # Pionowa linia (klasa 1)
-#     [[0, 1, 0],
-#      [0, 1, 0],
-#      [0, 1, 0]],
-    
-#     # Lewy górny róg (klasa 2)
-#     [[1, 0, 0],
-#      [1, 0, 0],
-#      [0, 0, 0]],
-    
-#     # Szum losowy (klasa 3)
-#     [[0, 1, 0],
-#      [1, 0, 1],
-#      [0, 1, 0]]
-# ], dtype=np.float32)     
                
                    #  LEVEL 7
 X = np.array([
@@ -411,40 +337,56 @@ def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_upd
 #                neurons_num = 64, density = 1,
 #                  activation_functions = ['leaky relu','leaky relu','sigmoid'], lr_update_method = ['Hugo_lr_bonus','Hugo_lr_bonus','Hugo_lr_bonus']
 #                  weight_innitialization= [None, None, 'xavier'] )
+class Hugo():
+    def __init__(self, loss, weight_initialization, dropout):
+        self.model = hugo_2_0(loss, weight_initialization, dropout)
 
-model_dos = hugo_2_0(loss = 'mse', weight_initialization= 'he', dropout = False)
+    def set_layers(self, X, Y, neurons_num, density, activation_functions: list, lr_update_method: list, weight_innitialization: list):
+        self.set_up_layers = set_up_layers(X_training, Y_training, model_nn = self.model,
+                 neurons_num = neurons_num, density = density,
+                 activation_functions = activation_functions, lr_update_method = lr_update_method, 
+                 weight_innitialization= weight_innitialization)
+        
+    def run(self, epochs, X, Y):
+        self.run_model = run_model(self.model, epochs, X, Y)
+        return self.run_model
 
-set_up_layers(X_training, Y_training, model_nn = model_dos,
-               neurons_num = 64, density = 1,
+if __name__ == "__main__":
+     model_dos = hugo_2_0(loss = 'mse', weight_initialization= 'he', dropout = False)
+
+     set_up_layers(X_training, Y_training, model_nn = model_dos,
+                 neurons_num = 64, density = 1,
                  activation_functions = ['leaky relu','leaky relu','leaky relu'], lr_update_method = ['none','none','none'], 
                  weight_innitialization= [None, None, None])
 
 
-epochs = 100
-# loss_over_epochs_t, loss_over_epochs_v,output = run_model(model, epochs, X_training, Y_training, X_val, Y_val)
-
-# print('                A')
-# print(f'training loss: {loss_over_epochs_t[-1]}')
-# print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
-
-loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training)
-# loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training, X_val, Y_val)
-print(f'output before rounding {output}')
-output = np.round(output).astype(int)
-accuracy = np.mean(output == Y_training)
-print(f' output after rounding\n{output}')
-print('\n')
-print(f'True data \n{Y_training}')
-
-print('                B')
-print(f'training loss: {loss_over_epochs_t2[-1]}')
-print(f'training accuracy: {accuracy}')
-print(f'VALIDATION loss: {loss_over_epochs_v2[-1]}\n')
-model_dos.check_layers_state()
 
 
-plt.figure(figsize=(12, 6))
-epochs = np.arange(1, epochs + 1)
+     epochs = 100
+     # loss_over_epochs_t, loss_over_epochs_v,output = run_model(model, epochs, X_training, Y_training, X_val, Y_val)
+
+     # print('                A')
+     # print(f'training loss: {loss_over_epochs_t[-1]}')
+     # print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
+
+     loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training)
+     # loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training, X_val, Y_val)
+     print(f'output before rounding {output}')
+     output = np.round(output).astype(int)
+     accuracy = np.mean(output == Y_training)
+     print(f' output after rounding\n{output}')
+     print('\n')
+     print(f'True data \n{Y_training}')
+
+     print('                B')
+     print(f'training loss: {loss_over_epochs_t2[-1]}')
+     print(f'training accuracy: {accuracy}')
+     print(f'VALIDATION loss: {loss_over_epochs_v2[-1]}\n')
+     model_dos.check_layers_state()
+
+
+     plt.figure(figsize=(12, 6))
+     epochs = np.arange(1, epochs + 1)
 
 
 # Training Loss
