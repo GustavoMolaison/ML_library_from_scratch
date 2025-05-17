@@ -79,7 +79,7 @@ def value_s(*args):
             raise TypeError("Value must be a string, not {}".format(type(v).__name__))
       
 
-class Layer():
+class Dense_Layer():
         def __init__(self, model = None):
             self.model = model
             self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
@@ -89,7 +89,7 @@ class Layer():
             self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
             pass
 
-        def set_layer(self, neurons_num,  input_features, activation_function, weight_initialization, is_input_layer = False, is_output_layer = False, lr_update_method = 'none'):
+        def set_layer(self, neurons_num: int,  input_features: int, activation_function: str, weight_initialization: str, is_input_layer = False, is_output_layer = False, lr_update_method = 'none'):
 
             if weight_initialization == None and self.model != None:
                 self.weight_initialization = self.model.weights_initialization
@@ -258,7 +258,6 @@ class hugo_2_0():
         return mse_loss    
     
     def forward(self, input):
-           input = min_max_normalize(input)
            output = input
            for layer in self.layers:
               output = layer.forward_L(output)
@@ -377,15 +376,15 @@ Y_training = Y
 def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_update_method: list,  model_nn, weight_initialization: list = [None, None, None]):
         
 
-        layer_I = Layer(model = model_nn)
+        layer_I = Dense_Layer(model = model_nn)
         layer_I.set_layer(input_features= X.shape[1], neurons_num = neurons_num, activation_function= activation_functions[0], weight_initialization = weight_initialization[0], is_input_layer = True, lr_update_method = lr_update_method[0])
         model_nn.add_layer(layer_I) 
 
-        dense = Layer(model = model_nn)
+        dense = Dense_Layer(model = model_nn)
         dense.set_layer(input_features = neurons_num, neurons_num = neurons_num, activation_function= activation_functions[1], weight_initialization = weight_initialization[1], is_input_layer = False, lr_update_method = lr_update_method[1])
         model_nn.add_layer(dense, dense = density) 
 
-        layer_0 = Layer(model = model_nn)
+        layer_0 = Dense_Layer(model = model_nn)
         layer_0.set_layer(input_features = 64, neurons_num = Y.shape[1], activation_function= activation_functions[2], weight_initialization = weight_initialization[2], is_output_layer = True, lr_update_method = lr_update_method[2])
         model_nn.add_layer(layer_0, dense = 1) 
 
@@ -425,7 +424,7 @@ if __name__ == "__main__":
      # print('                A')
      # print(f'training loss: {loss_over_epochs_t[-1]}')
      # print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
-
+     X_training = min_max_normalize(X_training)
      loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training)
      # loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training, X_val, Y_val)
      print(f'output before rounding {output}')

@@ -1,75 +1,84 @@
 import numpy as np
 from numpy import ndarray
-from hugo_utility import Utility as U 
 
-class conv_layer():
-        def __init__(self, model = None):
-           self.model = model
-           self.layer_set = False
+class convolutional_model():
+    def __init__(self):
+        
+        pass
 
 
-        def set_layer(self, param: ndarray, jump: int = 0):
+    def initilialization(self,  inp: ndarray, param: ndarray, jump: int = 0 ):
+        self.inp = inp
+        self.param = param
+        self.jump = jump
+
+    class conv_layer():
+        def __init__(self, inp: ndarray, param: ndarray, jump: int = 0 ):
+            self.inp = inp
             self.param = param
             self.jump = jump
-            self.activation_functions = {'none': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
-            self.loss_methods = {'mse': U.mse_loss}
-            self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier}
-            self.layer_set = True
-                 
-           
-        def forward_L(self, input):
-           if self.layer_set != True:
-              print('Conv_layer is not set. UseConv_layer.set_layer before anything else!')
-              LookupError()
-           self.input = input
-           self.output = np.zeros(self.input.shape)
-           self.input_grads = np.zeros(self.input.shape)
-           self.weight_grads = []
-           for sample_idx, sample in enumerate(self.input):
-              # Calculating new values after aplying kernels to padded data along with kernels and input pad
-              output, self.input_pad, self.kernels = conv_ld(sample, self.param, self.jump)
-              # weights sorted only by channels (3, number of weights for channel)
-              self.kernels_weights = np.reshape(self.kernels, (self.kernels.shape[0],  self.kernels.shape[1] *  self.kernels.shape[2] * self.kernels.shape[3] * self.kernels.shape[4]))
-                                                                       #Pre_backward
-              # mapping to what input each weight is connected(returns dict)
-              self.weight_index = map_input_weight_matrix(sample, self.param, self.input_pad, self.kernels, self.kernels_weights, map = 'weight')
-              # mapping to what weight each input is connected(returns dict)
-              self.input_index = map_input_weight_matrix(sample, self.param, self.input_pad, self.kernels, self.kernels_weights,  map = 'input')
-              # calculates how each input influence the output
-              input_grad = input_derivative(sample, self.input_pad, self.weight_index, self.kernels_weights, self.param)
-              # calculates how each weight thus param influence the output
-              weight_grad = weight_derivative(sample, self.input_pad, self.input_index, self.kernels_weights)
-              
-              self.output[sample_idx] = output
-              self.input_grads[sample_idx] = input_grad
-              self.weight_grads.append(weight_grad)
-         
-           self.weight_grads = np.stack(self.weight_grads)
-          
-           flatten = np.reshape(self.output, (self.output.shape[0], -1))
             
-           return self.output, flatten, self.weight_grads, self.input_grads 
-
-        def backward_L(self, grad):
-           if self.layer_set != True:
-              print('Conv_layer is not set. UseConv_layer.set_layer before anything else!')
-              LookupError()
-           grad = grad * self.af_gradient
-
-           layer_weight_grad = np.dot(self.weight_grad.T, grad)
-
-           layer_input_grad = np.dot(grad, self.layer_weights.T)
+            
+            # getting padded version of data
+            input_pad_shape = input_pad_calc(self.inp, self.param)
+            
+            
+            # getting kernels based on padded input (weights * param)
+            self.kernels = get_kernels(self.param, input_pad_shape)
+            
+            # weights sorted only by channels (3, number of weights for channel)
+            self.kernels_weights = np.reshape(self.kernels, (self.kernels.shape[0],  self.kernels.shape[1] *  self.kernels.shape[2] * self.kernels.shape[3] * self.kernels.shape[4]))
+            
+            
            
-           
+            
         
         def get_info(self):
             print(f'self.kernels{self.kernels.shape}')
             print(f'self.kernels_weights{self.kernels_weights.shape}')
 
-
-
-
-
+    def forward_conv(self, inp: ndarray, conv_layer: conv_layer) -> ndarray:
+        if inp.ndim != conv_layer.inp.ndim:
+            print('___________________________ERROR___________________________ \n Dimension inconsencty, (forward_conv function)')
+            quit()
+        # Saving layer frist input
+        conv_layer.inp = inp
+        # Calculating new values after aplying kernels to padded data
+        output, conv_layer.input_pad, conv_layer.kernels = conv_ld(inp, conv_layer.param, conv_layer.jump)
+        
+        
+        
+        
+        
+        
+        
+    
+        if output.ndim != conv_layer.inp.ndim:
+            print('___________________________ERROR___________________________ \n Dimension inconsencty2~-input_pad, (forward_conv function)')
+            print(f'Desired dimension of output: {conv_layer.inp.ndim}, actual: {output.ndim}')
+            print()
+            quit()
+        return output, conv_layer.input_pad
+    
+    def output_sum_basic_ver(self, inp: ndarray) -> ndarray:
+        return np.sum(inp)
+    
+    def backward_conv(self, inp: ndarray, conv_layer: conv_layer) -> ndarray:
+        if inp.ndim != conv_layer.inp.ndim:
+            print('___________________________ERROR___________________________ \n Dimension inconsencty, (Backward_conv function)')
+            quit()
+        # mapping to what input each weight is connected(returns dict)
+        weight_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, conv_layer.kernels_weights, map = 'weight')
+        # mapping to what weight each input is connected(returns dict)
+        input_index = map_input_weight_matrix(inp, conv_layer.param, conv_layer.input_pad, conv_layer.kernels, conv_layer.kernels_weights,  map = 'input')
+        # calculates how each input influence the output
+        i_der = input_derivative(conv_layer.inp, conv_layer.input_pad, weight_index, conv_layer.kernels_weights, conv_layer.param)
+        # calculates how each weight thus param influence the output
+        w_der = weight_derivative(inp, conv_layer.input_pad, input_index, conv_layer.kernels_weights)
+        # changin weight deriative so each sample was a diffrent kernel cause its easier to read 
+        w_der_to_read = d1_to_d2(w_der, conv_layer.param)
+        
+        return i_der, w_der_to_read
 
 
 
@@ -215,7 +224,8 @@ def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
         # Assiging single output to a index in singe channel.
           out_array_computed[row_inx, column_inx] = np.sum(out_array)
         # Assigin whole kernel before summing to an index by order column then rows.
-          kernels[channel_idx, row_inx, column_inx ] = out_array
+          kernels[channel_idx, row_inx, column_inx] = out_array
+    
     # Adding fully proccesed channel to list and moving to the next.
       channels_combined.append(out_array_computed) 
     # Combining all saved channels.
@@ -552,7 +562,7 @@ def convolutional_input_output(input: ndarray, param: ndarray, model, flatten = 
   model.input_grads = input_grads
   # input_grads = np.sum(sample for sample in input_der_list)
 
-  return output_final, flatten, sum_list, input_grads, param_grads
+  return output_final, output_flatten, sum_list, input_grads, param_grads
 
 
    
@@ -567,19 +577,16 @@ def sum_param_gradients(sample_derivative_list: list) -> ndarray:
 
    
 if __name__ == "__main__":
-  layer = conv_layer()
-  layer.set_layer(param = param_1d)
-  output, flatten, weight_grad, input_grad = layer.forward_L(input_1d)
-  print(weight_grad)
-  print(input_grad)
+  model = convolutional_model()
+  output_final, flatten, sum_list, input_grads, param_grads = convolutional_input_output(input_1d, param_1d, model)
 
   # print('END')
-#   print(flatten)
+  print(flatten)
 #   print(output_final.shape)
   #   print('END')
   # print(sum_list)
 #   print(input_grads)
-  # print(param_grads)
+  print(param_grads)
 
 
 
