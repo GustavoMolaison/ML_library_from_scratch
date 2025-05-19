@@ -144,7 +144,6 @@ class Layer():
             grad = grad * self.af_gradient
             
             layer_weight_grad = np.dot(self.weight_gradient.T, grad)
-            
             layer_bias_grad = np.sum(grad * self.bias_gradient, axis = 0)
             layer_input_grad = np.dot(grad, self.layer_weights.T) 
             
@@ -251,10 +250,11 @@ class hugo_2_0():
         grad = mse_grad
         grad = self.output_layer.backward_L(grad)
         grad = np.clip(grad, -1, 1)
-       
+        print(self.output_layer.layer_weights.shape)
         for layer in reversed(self.layers):
+            print(layer.layer_weights.shape)
             grad = layer.backward_L(grad)
-           
+        quit()
         return mse_loss    
     
     def forward(self, input):

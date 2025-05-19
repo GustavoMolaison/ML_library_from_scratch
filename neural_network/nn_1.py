@@ -89,11 +89,14 @@ class Dense_Layer():
             self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
             pass
 
-        def set_layer(self, neurons_num: int,  input_features: int, activation_function: str, weight_initialization: str, is_input_layer = False, is_output_layer = False, lr_update_method = 'none'):
+        def set_layer(self, neurons_num: int,  input_features: int, activation_function: str, weight_initialization = None, lr_update_method = 'none'):
 
             if weight_initialization == None and self.model != None:
                 self.weight_initialization = self.model.weights_initialization
             else:
+                if weight_initialization == None:
+                   print('You must set weight innitialization for each layer or pass model with weight innitialization setted')
+                   raise LookupError
                 self.weight_initialization = weight_initialization
             
             
@@ -104,8 +107,6 @@ class Dense_Layer():
             self.layer_bias = np.zeros(neurons_num,)
             self.layer_af_calc = self.activation_functions[activation_function]
             # self.layer_weights = np.array([[3]], dtype= 'float64')
-            self.is_input_layer = is_input_layer
-            self.is_output_layer = is_output_layer
             self.dead_neurons = False
             self.lr_bonus = 0
             self.lr_update_method = lr_update_method
@@ -121,7 +122,8 @@ class Dense_Layer():
                 self.dead_neurons = True
                 print('Dead neurons appeared')
                
-          
+            print(input)
+            quit()
             self.output, self.weight_gradient  = dot_calc(input, self.layer_weights)
             self.output, self.bias_gradient  = bias_calc(self.output, self.layer_bias)
             self.output, self.af_gradient = self.layer_af_calc(self.output)
@@ -143,9 +145,8 @@ class Dense_Layer():
             # print(f'self.layer_weights: {self.layer_weights.shape}')
             grad = grad * self.af_gradient
             
-            layer_weight_grad = np.dot(self.weight_gradient.T, grad)
-            
-            layer_bias_grad = np.sum(grad * self.bias_gradient, axis = 0)
+            layer_weight_grad = np.dot(self.weight_gradient.T, grad) 
+            layer_bias_grad = np.sum(grad * self.bias_gradient, axis = 0)   
             layer_input_grad = np.dot(grad, self.layer_weights.T) 
             
             #  gradient is how current layer affects loss, if we multiply it by weights we get how previous layer affected the loss cause input is multiplied by weights
@@ -227,11 +228,7 @@ class hugo_2_0():
 
     def add_layer(self, layer, dense = 1):
       
-        if layer.is_output_layer == True:
-           self.output_layer = layer
- 
         
-        else:   
             for density in range(dense):
                self.layers.append(layer)
     
@@ -249,10 +246,10 @@ class hugo_2_0():
     def backward(self, x, y):
         mse_loss, mse_grad = self.loss_methods[self.loss](x, y)
         grad = mse_grad
-        grad = self.output_layer.backward_L(grad)
         grad = np.clip(grad, -1, 1)
-       
+
         for layer in reversed(self.layers):
+            
             grad = layer.backward_L(grad)
            
         return mse_loss    
@@ -262,12 +259,7 @@ class hugo_2_0():
            for layer in self.layers:
               output = layer.forward_L(output)
            
-           if not hasattr(self, 'output_layer'):
-              self.output_layer = self.Layer(self)
-              
-              self.output_layer.set_layer(input_features = output.shape[1], neurons_num = input.shape[1], activation_function = 'none')
-          
-           output = self.output_layer.forward_L(output)
+           
            return output     
     
 
@@ -377,15 +369,15 @@ def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_upd
         
 
         layer_I = Dense_Layer(model = model_nn)
-        layer_I.set_layer(input_features= X.shape[1], neurons_num = neurons_num, activation_function= activation_functions[0], weight_initialization = weight_initialization[0], is_input_layer = True, lr_update_method = lr_update_method[0])
+        layer_I.set_layer(input_features= X.shape[1], neurons_num = neurons_num, activation_function= activation_functions[0], weight_initialization = weight_initialization[0], lr_update_method = lr_update_method[0])
         model_nn.add_layer(layer_I) 
 
         dense = Dense_Layer(model = model_nn)
-        dense.set_layer(input_features = neurons_num, neurons_num = neurons_num, activation_function= activation_functions[1], weight_initialization = weight_initialization[1], is_input_layer = False, lr_update_method = lr_update_method[1])
+        dense.set_layer(input_features = neurons_num, neurons_num = neurons_num, activation_function= activation_functions[1], weight_initialization = weight_initialization[1], lr_update_method = lr_update_method[1])
         model_nn.add_layer(dense, dense = density) 
 
         layer_0 = Dense_Layer(model = model_nn)
-        layer_0.set_layer(input_features = 64, neurons_num = Y.shape[1], activation_function= activation_functions[2], weight_initialization = weight_initialization[2], is_output_layer = True, lr_update_method = lr_update_method[2])
+        layer_0.set_layer(input_features = 64, neurons_num = Y.shape[1], activation_function= activation_functions[2], weight_initialization = weight_initialization[2], lr_update_method = lr_update_method[2])
         model_nn.add_layer(layer_0, dense = 1) 
 
 # model_uno = hugo_2_0(loss = 'mse', weight_initialization= 'linear')

@@ -1,0 +1,1 @@
+LEARING RATE jest rowny 0 przy importowaniu modelu 

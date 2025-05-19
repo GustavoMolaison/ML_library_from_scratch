@@ -1,26 +1,28 @@
 import numpy as np
 from numpy import ndarray
+from numpy.lib.stride_tricks import sliding_window_view
 from hugo_utility import Utility as U 
 
-class conv_layer():
+class Conv_layer():
         def __init__(self, model = None):
            self.model = model
            self.layer_set = False
 
 
-        def set_layer(self, param: ndarray, jump: int = 0):
+        def set_layer(self, param: ndarray, activaion_function = None, weight_initialization = None, jump: int = 0):
             self.param = param
             self.jump = jump
+            self.activation_function = activaion_function
             self.activation_functions = {'none': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
-            self.loss_methods = {'mse': U.mse_loss}
+            self.weight_initialization = weight_initialization
             self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier}
             self.layer_set = True
                  
            
         def forward_L(self, input):
            if self.layer_set != True:
-              print('Conv_layer is not set. UseConv_layer.set_layer before anything else!')
-              LookupError()
+              print('Conv_layer is not set. Use "Conv_layer.set_layer" before anything else!')
+              raise LookupError()
            self.input = input
            self.output = np.zeros(self.input.shape)
            self.input_grads = np.zeros(self.input.shape)
@@ -48,12 +50,12 @@ class conv_layer():
           
            flatten = np.reshape(self.output, (self.output.shape[0], -1))
             
-           return self.output, flatten, self.weight_grads, self.input_grads 
+           return flatten
 
         def backward_L(self, grad):
            if self.layer_set != True:
-              print('Conv_layer is not set. UseConv_layer.set_layer before anything else!')
-              LookupError()
+              print('Conv_layer is not set. Use "Conv_layer.set_layer" before anything else!')
+              raise LookupError()
            grad = grad * self.af_gradient
 
            layer_weight_grad = np.dot(self.weight_grad.T, grad)
@@ -126,6 +128,8 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     
     channels_combined_list = []
+    # print(inp.shape)
+    # quit()
     for inx, channel in enumerate(inp):
         
         
@@ -133,6 +137,7 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
         
 
         channel_pad_list = []
+        
         for column in channel.T:
             channel_pad = _pad_ld(column, param_len_0)
             channel_pad_list.append(channel_pad)
@@ -180,49 +185,66 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 # Calculating singe outputs from padded input using masks also saving all used masks/kernels
 def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
+    input_pad = input_pad_calc(inp, param)
+    # axis 0 is skipped because those are channels 
+    patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (1, 2))
+    
+
+    output = np.einsum('cijxy,xy->cij', patches, param)
+
+    kernels = patches * param
+    
+
+    return output, input_pad, kernels
+
+
+
+
+
+                                          # OLD ORIGINAL SLOW IMPLEMENTATION
     # initilization of entry data
-    input_pad  = input_pad_calc(inp, param)
-    channels_amount = inp.shape[0]
-#   "+ input_pad.ndim" is making sure code works with multiple channels and singe channel so its just shape[].
-#   These two rows below calculates how many kernels will fit in shape[0] and [1].
-    param_in_row = (input_pad.shape[(-2 + input_pad.ndim)] - (param.shape[0] - 1))
-    param_in_columns =  (input_pad.shape[(-1 + input_pad.ndim)] - (param.shape[1] - 1))
-    # Calculating how many kernels will be in our data.
-    # Param in row * param in columns is total sum of kernels we gonna need, shapes are just well, shapes of kernel.
-    kernels = np.zeros((channels_amount, param_in_row, param_in_columns, param.shape[0], param.shape[1]))
-    # Here are stored channels cause each will be calculated seperatly.
-    # Note that kernels are saved all in once. 
-    channels_combined = []
-    # We are looping for each channel both padded and unpadded.
-    # Note that kernels are saved all in once its easier than nesting another loop.
-    # To clarify we loop for channels in terms of input, kernels are saved all in once this is standard in this code.
-    for channel_idx, (channel, out_array_computed) in enumerate(zip(input_pad, np.zeros(inp.shape))):
-    # Looping through columns and rows inside singe channel.
-    # Frist we move downward icreasing rows.
-    # Then we move to the next column.
-      for column_inx, column in enumerate(channel.T):
-        for row_inx, row in enumerate(channel):
-        # Calculating mask for our padded data it moves alongside rows then change columns.
-          mask = channel[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
-        # Because sizes are not precalculated we check if the shape of param is diffrent of that of the mask.
-        # If true there is no more space for mask to move inside current column so we go to another using break.
-          if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
-              break
-        # Current mask (so part of input data) is multiplied by kernel/param then summed to get single output. 
-          out_array = mask * param
-          out_list_computed = np.sum(out_array)
+#     input_pad  = input_pad_calc(inp, param)
+#     channels_amount = inp.shape[0]
+# #   "+ input_pad.ndim" is making sure code works with multiple channels and singe channel so its just shape[].
+# #   These two rows below calculates how many kernels will fit in shape[0] and [1].
+#     param_in_row = (input_pad.shape[(-2 + input_pad.ndim)] - (param.shape[0] - 1))
+#     param_in_columns =  (input_pad.shape[(-1 + input_pad.ndim)] - (param.shape[1] - 1))
+#     # Calculating how many kernels will be in our data.
+#     # Param in row * param in columns is total sum of kernels we gonna need, shapes are just well, shapes of kernel.
+#     kernels = np.zeros((channels_amount, param_in_row, param_in_columns, param.shape[0], param.shape[1]))
+#     # Here are stored channels cause each will be calculated seperatly.
+#     # Note that kernels are saved all in once. 
+#     channels_combined = []
+#     # We are looping for each channel both padded and unpadded.
+#     # Note that kernels are saved all in once its easier than nesting another loop.
+#     # To clarify we loop for channels in terms of input, kernels are saved all in once this is standard in this code.
+#     for channel_idx, (channel, out_array_computed) in enumerate(zip(input_pad, np.zeros(inp.shape))):
+#     # Looping through columns and rows inside singe channel.
+#     # Frist we move downward icreasing rows.
+#     # Then we move to the next column.
+#       for column_inx, column in enumerate(channel.T):
+#         for row_inx, row in enumerate(channel):
+#         # Calculating mask for our padded data it moves alongside rows then change columns.
+#           mask = channel[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
+#         # Because sizes are not precalculated we check if the shape of param is diffrent of that of the mask.
+#         # If true there is no more space for mask to move inside current column so we go to another using break.
+#           if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
+#               break
+#         # Current mask (so part of input data) is multiplied by kernel/param then summed to get single output. 
+#           out_array = mask * param
+#           out_list_computed = np.sum(out_array)
         
-        # Assiging single output to a index in singe channel.
-          out_array_computed[row_inx, column_inx] = np.sum(out_array)
-        # Assigin whole kernel before summing to an index by order column then rows.
-          kernels[channel_idx, row_inx, column_inx ] = out_array
-    # Adding fully proccesed channel to list and moving to the next.
-      channels_combined.append(out_array_computed) 
-    # Combining all saved channels.
-    channels_combined = np.stack(channels_combined)
+#         # Assiging single output to a index in singe channel.
+#           out_array_computed[row_inx, column_inx] = np.sum(out_array)
+#         # Assigin whole kernel before summing to an index by order column then rows.
+#           kernels[channel_idx, row_inx, column_inx ] = out_array
+#     # Adding fully proccesed channel to list and moving to the next.
+#       channels_combined.append(out_array_computed) 
+#     # Combining all saved channels.
+#     channels_combined = np.stack(channels_combined)
     
     
-    return channels_combined, input_pad, kernels
+    return output, input_pad, kernels
 
 
 def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
@@ -235,7 +257,8 @@ def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
 def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
     #  for 2d data it returns 4d data
 
-   
+    # patches = sliding_window_view(x = input_pad, window_shape = param, axis = (1, 2))
+    # kernels = np.einsum('ckijxy, xy->cij', param, patches)
     kernels_combined = []
 
     for channel in input_pad:
@@ -567,14 +590,14 @@ def sum_param_gradients(sample_derivative_list: list) -> ndarray:
 
    
 if __name__ == "__main__":
-  layer = conv_layer()
+  layer = Conv_layer()
   layer.set_layer(param = param_1d)
-  output, flatten, weight_grad, input_grad = layer.forward_L(input_1d)
-  print(weight_grad)
-  print(input_grad)
+  flatten = layer.forward_L(input_1d)
+  # print(weight_grad)
+  # print(input_grad)
 
   # print('END')
-#   print(flatten)
+  print(flatten)
 #   print(output_final.shape)
   #   print('END')
   # print(sum_list)
