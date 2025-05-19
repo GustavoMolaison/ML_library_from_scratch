@@ -89,7 +89,10 @@ class Dense_Layer():
             self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
             pass
 
-        def set_layer(self, neurons_num: int,  input_features: int, activation_function: str, weight_initialization = None, lr_update_method = 'none'):
+        def set_layer(self, neurons_num: int, activation_function: str, weight_initialization = None, lr_update_method = 'none', input_features = None):
+
+            self.neurons_num = neurons_num
+            self.input_features = input_features
 
             if weight_initialization == None and self.model != None:
                 self.weight_initialization = self.model.weights_initialization
@@ -102,7 +105,8 @@ class Dense_Layer():
             
             
             # self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
-            self.layer_weights = np.random.randn(input_features,  neurons_num) * self.weights_initializations[self.weight_initialization](input_features, neurons_num)
+            if not self.input_features  == None:
+               self.layer_weights = np.random.randn(input_features,  neurons_num) * self.weights_initializations[self.weight_initialization](self.input_features, self.neurons_num)
             
             self.layer_bias = np.zeros(neurons_num,)
             self.layer_af_calc = self.activation_functions[activation_function]
@@ -118,16 +122,19 @@ class Dense_Layer():
         def forward_L(self, input):
             self.input = input.T
 
+            if self.input_features == None:
+                self.input_features = input.shape[1]
+                self.layer_weights = np.random.randn(self.input_features,  self.neurons_num) * self.weights_initializations[self.weight_initialization](self.input_features, self.neurons_num)
+      
             if np.any(self.layer_weights == 0):
                 self.dead_neurons = True
                 print('Dead neurons appeared')
                
-            print(input)
-            quit()
+            
             self.output, self.weight_gradient  = dot_calc(input, self.layer_weights)
             self.output, self.bias_gradient  = bias_calc(self.output, self.layer_bias)
             self.output, self.af_gradient = self.layer_af_calc(self.output)
-            
+           
             if self.model.dropout == True:
                 self.output = dropout(self.output)
 

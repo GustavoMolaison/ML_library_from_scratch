@@ -7,60 +7,95 @@ class Conv_layer():
         def __init__(self, model = None):
            self.model = model
            self.layer_set = False
+           self.activation_functions = {'none': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
+           self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier}
 
 
-        def set_layer(self, param: ndarray, activaion_function = None, weight_initialization = None, jump: int = 0):
+        def set_layer(self, param: ndarray, activation_function = 'none', weight_initialization = None, jump: int = 0):
             self.param = param
             self.jump = jump
-            self.activation_function = activaion_function
-            self.activation_functions = {'none': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
+            self.activation_function = activation_function
+            self.layer_af_calc = self.activation_functions[activation_function]
             self.weight_initialization = weight_initialization
-            self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier}
             self.layer_set = True
                  
            
         def forward_L(self, input):
+           
+           if input.ndim != 4:
+              print(f'Input to conv_layer must be shape (Sample, channels, widht, height).\n Not {input.shape} ')
+              raise LookupError()
+
            if self.layer_set != True:
               print('Conv_layer is not set. Use "Conv_layer.set_layer" before anything else!')
               raise LookupError()
-           self.input = input
-           self.output = np.zeros(self.input.shape)
-           self.input_grads = np.zeros(self.input.shape)
-           self.weight_grads = []
-           for sample_idx, sample in enumerate(self.input):
-              # Calculating new values after aplying kernels to padded data along with kernels and input pad
-              output, self.input_pad, self.kernels = conv_ld(sample, self.param, self.jump)
-              # weights sorted only by channels (3, number of weights for channel)
-              self.kernels_weights = np.reshape(self.kernels, (self.kernels.shape[0],  self.kernels.shape[1] *  self.kernels.shape[2] * self.kernels.shape[3] * self.kernels.shape[4]))
-                                                                       #Pre_backward
-              # mapping to what input each weight is connected(returns dict)
-              self.weight_index = map_input_weight_matrix(sample, self.param, self.input_pad, self.kernels, self.kernels_weights, map = 'weight')
-              # mapping to what weight each input is connected(returns dict)
-              self.input_index = map_input_weight_matrix(sample, self.param, self.input_pad, self.kernels, self.kernels_weights,  map = 'input')
-              # calculates how each input influence the output
-              input_grad = input_derivative(sample, self.input_pad, self.weight_index, self.kernels_weights, self.param)
-              # calculates how each weight thus param influence the output
-              weight_grad = weight_derivative(sample, self.input_pad, self.input_index, self.kernels_weights)
-              
-              self.output[sample_idx] = output
-              self.input_grads[sample_idx] = input_grad
-              self.weight_grads.append(weight_grad)
-         
-           self.weight_grads = np.stack(self.weight_grads)
-          
-           flatten = np.reshape(self.output, (self.output.shape[0], -1))
+           
             
-           return flatten
+           output = np.zeros(input.shape)
+           self.input_grads = np.zeros(input.shape)
+           self.weight_grads = []
+          
+       
+           for sample_idx, sample in enumerate(input):
+              # Calculating new values after aplying kernels to padded data along with kernels and input pad
+              output_sample, input_pad, kernels = conv_ld(sample, self.param, self.jump)
+              # weights sorted only by channels (3, number of weights for channel)
+              self.kernels_weights = np.reshape(kernels, (kernels.shape[0],  kernels.shape[1] *  kernels.shape[2] * kernels.shape[3] * kernels.shape[4]))
+
+                                                             #Pre_backward
+              # mapping to what input each weight is connected(returns dict)
+              weight_index = map_input_weight_matrix(sample, self.param, input_pad, kernels, self.kernels_weights, map = 'weight')
+              # mapping to what weight each input is connected(returns dict)
+              input_index = map_input_weight_matrix(sample, self.param, input_pad, kernels, self.kernels_weights,  map = 'input')
+              # calculates how each input influence the output
+              input_grad = input_derivative(sample, input_pad, weight_index, self.kernels_weights, self.param)
+              # calculates how each weight thus param influence the output
+              weight_grad = weight_derivative(sample, input_pad, input_index, self.kernels_weights)
+              # adds up grads from all kernels into one kernel  
+            
+              
+              output[sample_idx] = output_sample
+              self.input_grads[sample_idx] = input_grad
+              
+            
+         
+              self.weight_grads.append(weight_grad)
+
+           self.input_grads = self.input_grads.reshape(self.input_grads.shape[0], -1)
+
+           self.weight_grads = np.stack(self.weight_grads)
+           self.weight_grads = np.reshape(self.weight_grads, (self.weight_grads.shape[0], -1))
+           
+          
+           self.flatten = np.reshape(output, (output.shape[0], -1))
+           self.flatten, self.af_gradient = self.layer_af_calc(self.flatten)
+           
+            
+           return self.flatten
 
         def backward_L(self, grad):
+           
            if self.layer_set != True:
               print('Conv_layer is not set. Use "Conv_layer.set_layer" before anything else!')
               raise LookupError()
+           
+           
            grad = grad * self.af_gradient
+           
+           
+          
+       
+           layer_weight_grad = np.dot(self.weight_grads.T, grad)
+           layer_weight_grad = np.reshape(layer_weight_grad, (-1, *self.param.shape))
+           layer_weight_grad = layer_weight_grad.sum(axis = 0)
+           
+           self.param -= layer_weight_grad * self.model.lr
 
-           layer_weight_grad = np.dot(self.weight_grad.T, grad)
+           layer_input_grad = np.dot(grad, self.input_grads.T)
 
-           layer_input_grad = np.dot(grad, self.layer_weights.T)
+           return layer_input_grad
+
+           
            
            
         
@@ -70,7 +105,19 @@ class Conv_layer():
 
 
 
+def add_up_weights_grad(grad, param):
+   output = np.zeros((grad.shape[0], *param.shape))
+   for idx, sample in enumerate(grad):
+     grad = grad.reshape(-1, param.size)
+     grad = grad.sum(axis=0)
+     grad = grad.reshape(param.shape)
+     output[idx] = grad
+    
+   
+   
 
+   return output
+   
 
 
 
@@ -89,20 +136,40 @@ def d1_to_d2(input, param):
     return output
        
        
-def unpad_info(inp, param, input_pad):
-    z_to_add_0 = inp.size - (inp.size - (param - 1))
-    index_to_skip = []
-    diff = 0
-    for i in range(z_to_add_0):
-       if i % 2 == 0:
-         index_to_skip.append(i - diff)
-         diff += 1
-       if i % 2 == 1:
-         index_to_skip.append(input_pad - diff)
-    if z_to_add_0 % 2 == 0:
-       index_to_add = z_to_add_0 //2
-    if z_to_add_0 % 2 == 1:
-       index_to_add = z_to_add_0 //2
+def unpad_info(inp, param, input_pad_axis):
+
+    total = param - 1
+
+    front_0 = total // 2
+    back_0  = total - front_0
+
+    front = list(range(0, front_0))
+    back = list(range(input_pad_axis - back_0, input_pad_axis))
+
+    return front + back
+    
+    # OLD CODE
+
+    # print(input_pad)
+    # print(param)
+    # # quit()
+    # # z_to_add its amount of 0 lines we added to data to pad it 
+    # z_to_add =  (param - 1)
+    # index_to_skip = []
+    # diff = 0
+
+    # # frist i will always be true we will add index 0 to skip 
+    # # second one will be false so add the opposite line going backwards
+    # # Lines were added one per side so we delete them this way as well
+    # # We do that until we deleted the same amoun of lines as was added
+    # # 
+    # for i in range(z_to_add):
+    #    if i % 2 == 0:
+    #      index_to_skip.append(i - diff)
+    #      diff += 1
+    #    else:
+    #      index_to_skip.append(input_pad - diff)
+        
     return index_to_skip
 
 def _pad_ld(inp: ndarray, param_size: int) -> ndarray:
@@ -116,6 +183,7 @@ def _pad_ld(inp: ndarray, param_size: int) -> ndarray:
          inp = np.concatenate([z, inp])
         if i % 2 == 0:
          inp = np.concatenate([inp, z])
+
     return inp
 
 
@@ -379,10 +447,12 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
 
 def input_derivative(inp: ndarray, input_pad: ndarray, weight_index: map_input_weight_matrix, weights: ndarray, param: ndarray) -> ndarray:
     
-    #  calculating which rows and colums are padding we dont need their derivatives
+    # Calculating which rows and colums were added during padding, we dont need their derivatives.
+    
     rows_to_skip = unpad_info(inp, param.shape[0], input_pad[0].shape[0])
+    
+    
     columns_to_skip = unpad_info(inp, param.shape[1], input_pad[0].shape[1])
-
     
     # Function calculates how many times mask interacted with certain input!
   
