@@ -13,6 +13,7 @@ class Conv_layer():
 
         def set_layer(self, param: ndarray, activation_function = 'none', weight_initialization = None, jump: int = 0):
             self.param = param
+            self.bias = 0
             self.jump = jump
             self.activation_function = activation_function
             self.layer_af_calc = self.activation_functions[activation_function]
@@ -35,22 +36,39 @@ class Conv_layer():
            self.input_grads = np.zeros(input.shape)
            self.weight_grads = []
           
-       
+           import time
            for sample_idx, sample in enumerate(input):
+            #   print('Conv_sample Done!')
+              start = time.perf_counter()
               # Calculating new values after aplying kernels to padded data along with kernels and input pad
-              output_sample, input_pad, kernels = conv_ld(sample, self.param, self.jump)
+              output_sample, input_pad, kernels = conv_ld(inp = sample, param =self.param, bias = self.bias, jump = self.jump)
+              end = time.perf_counter()
+            #   print(f"Execution time conv_ld: {end - start:.4f} seconds")
               # weights sorted only by channels (3, number of weights for channel)
-              self.kernels_weights = np.reshape(kernels, (kernels.shape[0],  kernels.shape[1] *  kernels.shape[2] * kernels.shape[3] * kernels.shape[4]))
-
+              kernels = np.reshape(kernels, (kernels.shape[0],  kernels.shape[1] *  kernels.shape[2] * kernels.shape[3] * kernels.shape[4]))
+              
                                                              #Pre_backward
               # mapping to what input each weight is connected(returns dict)
-              weight_index = map_input_weight_matrix(sample, self.param, input_pad, kernels, self.kernels_weights, map = 'weight')
+              start = time.perf_counter()
+              weight_grad = map_input_weight_matrix(sample, self.param, input_pad, kernels, kernels, map_key = 'weight')
+              end = time.perf_counter()
+            #   print(f"Execution time map_input_weight_matrix: {end - start:.4f} seconds")
+
               # mapping to what weight each input is connected(returns dict)
-              input_index = map_input_weight_matrix(sample, self.param, input_pad, kernels, self.kernels_weights,  map = 'input')
+              start = time.perf_counter()
+              input_index = map_input_weight_matrix(sample, self.param, input_pad, kernels, kernels,  map_key = 'input')
+              end = time.perf_counter()
+            #   print(f"Execution time map_input_weight_matrix: {end - start:.4f} seconds")
               # calculates how each input influence the output
-              input_grad = input_derivative(sample, input_pad, weight_index, self.kernels_weights, self.param)
+              start = time.perf_counter()
+              input_grad = input_derivative(sample, input_pad, input_index, kernels, self.param)
+              end = time.perf_counter()
+            #   print(f"Execution time input_derivative: {end - start:.4f} seconds")
               # calculates how each weight thus param influence the output
-              weight_grad = weight_derivative(sample, input_pad, input_index, self.kernels_weights)
+            #   start = time.perf_counter()
+            #   weight_grad = weight_derivative(sample, input_pad, weight_index, kernels)
+            #   end = time.perf_counter()
+            #   print(f"Execution time weight_derivative: {end - start:.4f} seconds")
               # adds up grads from all kernels into one kernel  
             
               
@@ -62,15 +80,18 @@ class Conv_layer():
               self.weight_grads.append(weight_grad)
 
            self.input_grads = self.input_grads.reshape(self.input_grads.shape[0], -1)
-
+        #    print(self.weight_grads)
            self.weight_grads = np.stack(self.weight_grads)
+        #    print(self.weight_grads)
+        #    quit()
            self.weight_grads = np.reshape(self.weight_grads, (self.weight_grads.shape[0], -1))
            
           
            self.flatten = np.reshape(output, (output.shape[0], -1))
            self.flatten, self.af_gradient = self.layer_af_calc(self.flatten)
            
-            
+           self.bias_grad = np.ones(self.flatten.shape).sum()
+    
            return self.flatten
 
         def backward_L(self, grad):
@@ -84,13 +105,17 @@ class Conv_layer():
            
            
           
-       
+           print(self.weight_grads)
            layer_weight_grad = np.dot(self.weight_grads.T, grad)
            layer_weight_grad = np.reshape(layer_weight_grad, (-1, *self.param.shape))
            layer_weight_grad = layer_weight_grad.sum(axis = 0)
+
+           layer_bias_grad = np.sum(grad * self.bias_grad)
+        #    print(layer_bias_grad)
+        #    quit()
            
            self.param -= layer_weight_grad * self.model.lr
-
+           self.bias -= layer_bias_grad * self.model.lr
            layer_input_grad = np.dot(grad, self.input_grads.T)
 
            return layer_input_grad
@@ -251,14 +276,16 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 # PURPOUSE#######
 # CHECK? -> WORKING V
 # Calculating singe outputs from padded input using masks also saving all used masks/kernels
-def conv_ld(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
+def conv_ld(inp: ndarray, param: ndarray, bias: float,  jump: int = 0) -> ndarray:
     
     input_pad = input_pad_calc(inp, param)
     # axis 0 is skipped because those are channels 
     patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (1, 2))
     
-
     output = np.einsum('cijxy,xy->cij', patches, param)
+   
+    output = output + bias
+    
 
     kernels = patches * param
     
@@ -353,19 +380,21 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
 
 
 
-def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, kernels: ndarray, weights: ndarray, map: str) -> ndarray:
-     
+def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, kernels: ndarray, weights: ndarray, map_key: str) -> ndarray:
+    #  For map_key == weights it will return weights derivative
+    #  For map_key == input it will return maped indexes only
     
     # turning kernels back to 2d
     # kernels = kernels.reshape(((kernels.shape[0] * kernels.shape[1], kernels.shape[2] * kernels.shape[3])))
     
+    weights_derivative = np.zeros(weights.shape)
                    # ITERATING FOR EVERY CHANNEL
     # __________________________________________________________________________________________________________________________________
     channels_combined = []
     for channel_idx, channel in enumerate(input_pad):
     #   print('channel??')
     # __________________________________________________________________________________________________________________________________
-
+      
 
               #  CREATING VARIABLES TO SAVE DATA
     # __________________________________________________________________________________________________________________________________
@@ -420,7 +449,7 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
                     # print(f'row.shape: {row.shape[0]}')
                     # print(f'mask.shape[0]: {mask.shape[0]}')
                     # print(f'row_mask.size: {row_mask.size}')
-            #                HERE IS THE ISSUE 02.04.2025     
+                
             #                                                    Weight num is order in which weights are used durning forward function
                                                             #    So weight (0,0) will be one multiplied by input (0,0)
                     weight_num = ((column_mask_inx + 1) + row_mask.size * row_mask_inx) + mask.size * (column_inx * (column.shape[0] - (mask.shape[0] - 1))) + (row_inx * mask.size)
@@ -429,21 +458,28 @@ def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, ke
                     # print(f'weight_num{weight_num}')
                     # print(f'weight_index{weight_index}')
                     # print(f'weights.shape[1]{weights.shape[1]}')
-                    
-                    
-                    try:
-                       weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx].append(weight_index)
-                    except KeyError:
-                       weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx] = [weight_index]
-            
-            # print(weights_map)
-          
-      channels_combined.append(weights_map) 
+                   
+                    if map_key == 'input':
+                      try:
+                         weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx].append(weight_index)
+                      except KeyError:
+                         weights_map[row_mask_inx + row_inx, column_mask_inx + column_inx] = [weight_index]
 
+                    elif map_key == 'weight':
+                         weights_derivative[weight_index] = channel[row_mask_inx + row_inx, column_mask_inx + column_inx]
+            
+      
+      if map_key == 'input':    
+        channels_combined.append(weights_map) 
+
+      
+         
     
     
-    weights_map = channels_combined
-    return channels_combined
+    if map_key == 'input':
+      return channels_combined
+    if map_key == 'weight':
+      return weights_derivative
 
 def input_derivative(inp: ndarray, input_pad: ndarray, weight_index: map_input_weight_matrix, weights: ndarray, param: ndarray) -> ndarray:
     
@@ -496,33 +532,49 @@ def weight_derivative(inp: ndarray, input_pad: ndarray, input_index: map_input_w
     # Creating template for data to fill each weight will have its own deritive so the shape is the shape of weights themselfs
     weight_gradients = np.zeros(weights.shape)
     # iterating through channels
+    weight_grad = 0
+    for channel_idx, channel in enumerate(input_pad):
+        weight_grad += sum(input_index[0].values())
+        
+
+
+
+
     for channel_idx, channel in enumerate(input_pad):
         # iterating through every index in weights they are shaped (channels, amount of weights per channel)
         # We pick one channel at a time using weights[channel_idx] to avoid recalculating gradients for other channels.
         #  with index = (channel, *index) we add channel info to our index
+
+        
+
+
+
         for index in np.ndindex(weights[channel_idx].shape):
             index = (channel_idx, *index)
           
-          # Get all input positions whose associated weights include the current weight index
-          # this way we get every input weight was multiplied by
-          # every input in input_index has described weights to it. It means those were multiplied by eachother
+        #   # Get all input positions which associated weights include the current weight index
+        #   # this way we get every input, weight was multiplied by
+        #   # every input in input_index has described weights to it. It means those were multiplied by eachother
+        #     
             input_indexes = [key for key, value in input_index[channel_idx].items()
                              if index in value]
-            # if list is empty (equal to 0) we skip iteration to dont waste time and dont overwrite anythink because np.zeros are zero everywhere anyway
+        #     # if list is empty (equal to 0) we skip iteration to dont waste time and dont overwrite anythink because np.zeros are zero everywhere anyway
             if len(input_indexes) == 0:
                continue
-            # we get inputs from channel based on indexes we found were used 
-            # weights_inputs = [channel[row, column] for row, column in input_indexes] - old version
+        #     # we get inputs from channel based on indexes we found were used 
+        #     # weights_inputs = [channel[row, column] for row, column in input_indexes] #  old version
             rows, cols = zip(*input_indexes)
             weights_inputs = channel[rows, cols]
             
-          #   Here we are just adding inputs cause our operation is basiclt weight x input (for now we dont work with dense network at all)
+        #   #   Here we are just adding inputs cause our operation is basiclt weight x input 
             gradient = np.sum(weights_inputs)
             
             
-            # filling our np.zeros template
+        #     # filling our np.zeros template
             weight_gradients[*index] = gradient
-            
+    print(weight_grad)
+    print('\n')
+    print(weight_gradients)
     
     return weight_gradients
 

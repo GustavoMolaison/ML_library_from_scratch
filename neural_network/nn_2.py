@@ -250,11 +250,10 @@ class hugo_2_0():
         grad = mse_grad
         grad = self.output_layer.backward_L(grad)
         grad = np.clip(grad, -1, 1)
-        print(self.output_layer.layer_weights.shape)
+    
         for layer in reversed(self.layers):
-            print(layer.layer_weights.shape)
             grad = layer.backward_L(grad)
-        quit()
+       
         return mse_loss    
     
     def forward(self, input):

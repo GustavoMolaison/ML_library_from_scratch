@@ -439,6 +439,8 @@ def weight_derivative(inp: ndarray, input_pad: ndarray, input_index: map_input_w
             
             # filling our np.zeros template
             weight_gradients[*index] = gradient
+    print(weight_gradients)      
+    quit()  
             
     
     return weight_gradients

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from hugo_utility import Utility as U 
 
 def dot_calc(x, w):
     output = np.dot(x, w)
@@ -83,7 +84,7 @@ class Dense_Layer():
         def __init__(self, model = None):
             self.model = model
             self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
-            self.loss_methods = {'mse': mse_loss}
+            self.loss_methods = {'mse': mse_loss, 'cross_entropy': U.cross_entropy_loss}
             # self.loss = loss
             # self.lr = lr
             self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
@@ -93,6 +94,7 @@ class Dense_Layer():
 
             self.neurons_num = neurons_num
             self.input_features = input_features
+            self.activation_function = activation_function
 
             if weight_initialization == None and self.model != None:
                 self.weight_initialization = self.model.weights_initialization
@@ -119,7 +121,7 @@ class Dense_Layer():
             
 
     
-        def forward_L(self, input):
+        def forward_L(self, input, training):
             self.input = input.T
 
             if self.input_features == None:
@@ -130,10 +132,10 @@ class Dense_Layer():
                 self.dead_neurons = True
                 print('Dead neurons appeared')
                
-            
-            self.output, self.weight_gradient  = dot_calc(input, self.layer_weights)
-            self.output, self.bias_gradient  = bias_calc(self.output, self.layer_bias)
-            self.output, self.af_gradient = self.layer_af_calc(self.output)
+            if training == True:
+              self.output, self.weight_gradient  = dot_calc(input, self.layer_weights)
+              self.output, self.bias_gradient  = bias_calc(self.output, self.layer_bias)
+              self.output, self.af_gradient = self.layer_af_calc(self.output)
            
             if self.model.dropout == True:
                 self.output = dropout(self.output)
@@ -160,24 +162,24 @@ class Dense_Layer():
            
 
             # Debuggin tools
-            if hasattr(self, 'old_weights'):
-                if (self.old_weights == self.layer_weights.T).all():
-                    print("-----------------------\n" 
-                          "WEIGHTS ARE THE SAME")
+            # if hasattr(self, 'old_weights'):
+            #     if (self.old_weights == self.layer_weights.T).all():
+            #         print("-----------------------\n" 
+            #               "WEIGHTS ARE THE SAME")
                     
-            if hasattr(self, 'old_lig'):
-                if (self.old_lig == layer_input_grad).all():
-                    print("-----------------------\n" 
-                          "INPUT GRADIENT DIDNT CHANGE")
+            # if hasattr(self, 'old_lig'):
+            #     if (self.old_lig == layer_input_grad).all():
+            #         print("-----------------------\n" 
+            #               "INPUT GRADIENT DIDNT CHANGE")
             
-            self.old_lig = layer_input_grad.copy()
-            self.old_weights = self.layer_weights.T.copy()
+            # self.old_lig = layer_input_grad.copy()
+            # self.old_weights = self.layer_weights.T.copy()
             
             # saving data
-            self.input_grads.append(layer_input_grad.copy())
-            self.weights_ac_epo.append(self.layer_weights.copy())
+            # self.input_grads.append(layer_input_grad.copy())
+            # self.weights_ac_epo.append(self.layer_weights.copy())
             # print(f'{self.layer_weights}\n')
-            t_w = self.layer_weights[0].copy()
+            # t_w = self.layer_weights[0].copy()
             # print(layer_weight_grad * (self.model.lr + self.lr_update(layer_weight_grad)))
             # print(self.model.lr)
             # print(layer_weight_grad)
@@ -213,7 +215,7 @@ class hugo_2_0():
         value_s(loss, weight_initialization)
         value_b(dropout)
         self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
-        self.loss_methods = {'mse': mse_loss}
+        self.loss_methods = {'mse': mse_loss, 'cross_entropy': U.cross_entropy_loss}
         self.loss = loss
         self.lr = lr
         self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
@@ -258,30 +260,32 @@ class hugo_2_0():
         for layer in reversed(self.layers):
             
             grad = layer.backward_L(grad)
+            grad = np.clip(grad, -1, 1)
            
         return mse_loss    
     
-    def forward(self, input):
+    def forward(self, input, training):
            output = input
            for layer in self.layers:
-              output = layer.forward_L(output)
+              print('Layer Done!')
+              output = layer.forward_L(output, training)
            
            
            return output     
     
 
-def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None):
+def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None, training = True):
       loss_over_epochs_t = []
       loss_over_epochs_v = [] 
       for i in range(epochs):
         print(f'EPOCH {i}')
-        output_t = model.forward(input = X_training)
+        output_t = model.forward(input = X_training, training = True)
         loss = model.backward(output_t, Y_training)
         loss_over_epochs_t.append(loss)
 
         # print(f'Output{output}')
         if isinstance(X_val, np.ndarray):
-          output_v = model.forward(input = X_val)
+          output_v = model.forward(input = X_val, training = False)
           val_mse_loss = np.mean((Y_val- output_v)**2)
           loss_over_epochs_v.append(val_mse_loss)
         else:
@@ -291,7 +295,7 @@ def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None)
         print(f'training loss: {loss}\n')
         print(f'VALIDATION loss: {val_mse_loss}\n')
       
-      return loss_over_epochs_t, loss_over_epochs_v, output_t
+      return loss_over_epochs_t, loss_over_epochs_v, output_t, output_v
         
 
                
