@@ -91,8 +91,10 @@ print(X.shape)
 print(y.shape)
 # quit()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-X_train = X_train[:1000]
-y_train = y_train[:1000]
+X_train = X_train[: 50]
+y_train = y_train[: 50]
+X_test = X_test[: 50]
+y_test = y_test[: 50]
 print(X_train.shape)
 print(y_train.shape)
 # quit()
@@ -121,10 +123,10 @@ hugo.model.add_layer(layer = layer_O, dense = 1)
 #                  activation_functions = ['leaky relu','leaky relu','leaky relu'], lr_update_method = ['none','none','none'], 
 #                  weight_initialization= [None, None, None])
 
-loss_over_epochs_t, loss_over_epochs_v, output = hugo.run(model_nn = hugo.model, epochs = 100, X = X_train, Y = y_train,  )
 
 
 
+loss_over_epochs_t, loss_over_epochs_v, output_t, output_v = hugo.run(model_nn = hugo.model, epochs = 100, X = X_train, Y = y_train, X_val = X_test, Y_val = y_test)
 
 
 
@@ -143,10 +145,16 @@ layers = hugo.model.layers
 #         print('WEIGHTS ARE THE SAME')
    
 
-print(output)
-output = np.round(output).astype(int)
-accuracy = np.mean(output == y_train)
-print(f'rounded output: {output}')
+
+output_t = np.round(output_t).astype(int)
+accuracy_t = np.mean(output_t == y_train)
+
+print(f'rounded output training: {output_t}')
 print(f'training loss: {loss_over_epochs_t[-1]}')
-print(f'training accuracy: {accuracy}')
-print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
+print(f'training accuracy: {accuracy_t}')
+print('\n')
+output_v = np.round(output_v).astype(int)
+accuracy_v = np.mean(output_v == y_test)
+print(f'rounded output validation: {output_v}')
+print(f'VALIDATION loss: {loss_over_epochs_v[-1]}')
+print(f'training accuracy: {accuracy_v}')

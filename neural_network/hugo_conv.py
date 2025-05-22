@@ -8,7 +8,7 @@ class Conv_layer():
            self.model = model
            self.layer_set = False
            self.activation_functions = {'none': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
-           self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier}
+           self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier, 'l': U.cross_entropy_loss}
 
 
         def set_layer(self, param: ndarray, activation_function = 'none', weight_initialization = None, jump: int = 0):
@@ -21,7 +21,7 @@ class Conv_layer():
             self.layer_set = True
                  
            
-        def forward_L(self, input):
+        def forward_L(self, input, training):
            
            if input.ndim != 4:
               print(f'Input to conv_layer must be shape (Sample, channels, widht, height).\n Not {input.shape} ')
@@ -38,6 +38,10 @@ class Conv_layer():
           
            import time
            for sample_idx, sample in enumerate(input):
+              
+              if training == False:
+                 output_sample = conv_ld(inp = sample, param =self.param, bias = self.bias, jump = self.jump)
+                 output[sample_idx] = output_sample
             #   print('Conv_sample Done!')
               start = time.perf_counter()
               # Calculating new values after aplying kernels to padded data along with kernels and input pad
@@ -105,14 +109,13 @@ class Conv_layer():
            
            
           
-           print(self.weight_grads)
+         
            layer_weight_grad = np.dot(self.weight_grads.T, grad)
            layer_weight_grad = np.reshape(layer_weight_grad, (-1, *self.param.shape))
            layer_weight_grad = layer_weight_grad.sum(axis = 0)
 
            layer_bias_grad = np.sum(grad * self.bias_grad)
-        #    print(layer_bias_grad)
-        #    quit()
+       
            
            self.param -= layer_weight_grad * self.model.lr
            self.bias -= layer_bias_grad * self.model.lr

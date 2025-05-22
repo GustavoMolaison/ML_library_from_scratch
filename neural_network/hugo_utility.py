@@ -45,6 +45,16 @@ class Utility():
         loss_derivative = (2 / y.shape[0]) * (x - y)
 
         return loss, loss_derivative
+    
+    def cross_entropy_loss(x, y, eps=1e-15):
+       
+       # Clip to prevent log(0)
+       x = np.clip(x, eps, 1 - eps)
+      
+       # Apply element-wise loss
+       loss = -np.sum(y * np.log(x), axis=1)
+    
+       return np.mean(loss)
 
     def linear(*args):
         return 1

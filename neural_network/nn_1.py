@@ -294,10 +294,10 @@ def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None,
   
         print(f'training loss: {loss}\n')
         print(f'VALIDATION loss: {val_mse_loss}\n')
-      
-      return loss_over_epochs_t, loss_over_epochs_v, output_t, output_v
-        
-
+      if isinstance(X_val, np.ndarray):
+        return loss_over_epochs_t, loss_over_epochs_v, output_t, output_v
+      else:   
+        return loss_over_epochs_t, output_t
                
                    #  LEVEL 7
 X = np.array([
@@ -428,7 +428,7 @@ if __name__ == "__main__":
      # print(f'training loss: {loss_over_epochs_t[-1]}')
      # print(f'VALIDATION loss: {loss_over_epochs_v[-1]}\n')
      X_training = min_max_normalize(X_training)
-     loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training)
+     loss_over_epochs_t2, output = run_model(model_dos, epochs, X_training, Y_training)
      # loss_over_epochs_t2, loss_over_epochs_v2, output = run_model(model_dos, epochs, X_training, Y_training, X_val, Y_val)
      print(f'output before rounding {output}')
      output = np.round(output).astype(int)
@@ -436,11 +436,13 @@ if __name__ == "__main__":
      print(f' output after rounding\n{output}')
      print('\n')
      print(f'True data \n{Y_training}')
-
-     print('                B')
      print(f'training loss: {loss_over_epochs_t2[-1]}')
      print(f'training accuracy: {accuracy}')
-     print(f'VALIDATION loss: {loss_over_epochs_v2[-1]}\n')
+
+    #  print('                B')
+    #  print(f'training loss: {loss_over_epochs_t2[-1]}')
+    #  print(f'training accuracy: {accuracy}')
+    #  print(f'VALIDATION loss: {loss_over_epochs_v2[-1]}\n')
      model_dos.check_layers_state()
 
 
