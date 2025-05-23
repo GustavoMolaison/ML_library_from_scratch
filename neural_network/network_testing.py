@@ -1,6 +1,7 @@
 from nn_1 import Hugo, Dense_Layer
 from hugo_conv import Conv_layer
 import numpy as np
+from hugo_utility import Utility as U
 
 X = np.array(
     [  # Sample 0 - like "1"
@@ -93,17 +94,20 @@ print(y.shape)
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 X_train = X_train[: 50]
 y_train = y_train[: 50]
+y_train = U.one_hot_encoding(y_train, 10)
 X_test = X_test[: 50]
 y_test = y_test[: 50]
+y_test = U.one_hot_encoding(y_test, 10)
+
 print(X_train.shape)
-print(y_train.shape)
+print(y_test.shape)
 # quit()
 
 
-hugo = Hugo(loss = 'mse', weight_initialization= 'he', dropout = False)
+hugo = Hugo(loss = 'cross_entropy', weight_initialization= 'he', dropout = False, lr = 0.0001)
 
 layer_conv = Conv_layer(model = hugo.model)
-layer_conv.set_layer(param = np.ones((3, 3)), weight_initialization = 'he', activation_function= 'tanh')
+layer_conv.set_layer(param = np.ones((3, 3)), weight_initialization = 'he', activation_function= 'none')
 hugo.model.add_layer(layer = layer_conv, dense = 1)
 
 layer_I = Dense_Layer(model = hugo.model)
@@ -115,7 +119,7 @@ layer_D.set_layer(neurons_num=64, activation_function = 'leaky relu', weight_ini
 hugo.model.add_layer(layer = layer_D, dense = 1)
 
 layer_O = Dense_Layer(model = hugo.model)
-layer_O.set_layer(neurons_num = y_train.shape[0], activation_function = 'leaky relu', weight_initialization= 'he', lr_update_method= 'none')
+layer_O.set_layer(neurons_num = 10, activation_function = 'none', weight_initialization= 'he', lr_update_method= 'none')
 hugo.model.add_layer(layer = layer_O, dense = 1)
 
 # hugo.set_layers(X = X_training, Y = Y_training,  model_nn = hugo.model,
@@ -126,7 +130,7 @@ hugo.model.add_layer(layer = layer_O, dense = 1)
 
 
 
-loss_over_epochs_t, loss_over_epochs_v, output_t, output_v = hugo.run(model_nn = hugo.model, epochs = 100, X = X_train, Y = y_train, X_val = X_test, Y_val = y_test)
+loss_over_epochs_t, loss_over_epochs_v, output_t, output_v = hugo.run(model_nn = hugo.model, epochs = 50, X = X_train, Y = y_train, X_val = X_test, Y_val = y_test)
 
 
 
@@ -157,4 +161,4 @@ output_v = np.round(output_v).astype(int)
 accuracy_v = np.mean(output_v == y_test)
 print(f'rounded output validation: {output_v}')
 print(f'VALIDATION loss: {loss_over_epochs_v[-1]}')
-print(f'training accuracy: {accuracy_v}')
+print(f'test accuracy: {accuracy_v}')

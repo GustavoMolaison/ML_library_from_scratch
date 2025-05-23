@@ -8,7 +8,7 @@ class Conv_layer():
            self.model = model
            self.layer_set = False
            self.activation_functions = {'none': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
-           self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier, 'l': U.cross_entropy_loss}
+           self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier}
 
 
         def set_layer(self, param: ndarray, activation_function = 'none', weight_initialization = None, jump: int = 0):
@@ -40,7 +40,11 @@ class Conv_layer():
            for sample_idx, sample in enumerate(input):
               
               if training == False:
-                 output_sample = conv_ld(inp = sample, param =self.param, bias = self.bias, jump = self.jump)
+                 output_sample, input_pad, kernels = conv_ld(inp = sample, param =self.param, bias = self.bias, jump = self.jump)
+                #  print(output_sample)
+                 if np.isnan(output_sample).any():
+                    print('Nans in output')
+                    quit()
                  output[sample_idx] = output_sample
             #   print('Conv_sample Done!')
               start = time.perf_counter()
@@ -84,18 +88,19 @@ class Conv_layer():
               self.weight_grads.append(weight_grad)
 
            self.input_grads = self.input_grads.reshape(self.input_grads.shape[0], -1)
-        #    print(self.weight_grads)
+           self.input_grads = np.clip(self.input_grads, -1, 1)
+
            self.weight_grads = np.stack(self.weight_grads)
-        #    print(self.weight_grads)
-        #    quit()
-           self.weight_grads = np.reshape(self.weight_grads, (self.weight_grads.shape[0], -1))
            
+           self.weight_grads = np.reshape(self.weight_grads, (self.weight_grads.shape[0], -1))
+           self.weight_grads =  np.clip(self.weight_grads, -1, 1)
           
            self.flatten = np.reshape(output, (output.shape[0], -1))
            self.flatten, self.af_gradient = self.layer_af_calc(self.flatten)
            
            self.bias_grad = np.ones(self.flatten.shape).sum()
-    
+           self.bias_grad =  np.clip(self.bias_grad, -1, 1)
+
            return self.flatten
 
         def backward_L(self, grad):
@@ -717,7 +722,7 @@ def sum_param_gradients(sample_derivative_list: list) -> ndarray:
 if __name__ == "__main__":
   layer = Conv_layer()
   layer.set_layer(param = param_1d)
-  flatten = layer.forward_L(input_1d)
+  flatten = layer.forward_L(input_1d, training = True)
   # print(weight_grad)
   # print(input_grad)
 

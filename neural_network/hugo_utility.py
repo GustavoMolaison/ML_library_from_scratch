@@ -28,7 +28,11 @@ class Utility():
         output = (np.e**input - np.e**(-input)) / (np.e**input + np.e**(-input))
         derivative = 1 - output**2
         return output, derivative
-
+    
+    def softmax(z):
+       e_z = np.exp(z - np.max(z, axis=1, keepdims=True))
+       return e_z / np.sum(e_z, axis=1, keepdims=True)
+    
     def sigmoid(input):
         output = 1/(1 + np.exp(-input))
         derivative = np.exp(-input)/ (1 + np.exp(-input))**2
@@ -43,19 +47,30 @@ class Utility():
     def mse_loss(x, y):
         loss = np.mean((y - x)**2)
         loss_derivative = (2 / y.shape[0]) * (x - y)
+       
 
         return loss, loss_derivative
     
     def cross_entropy_loss(x, y, eps=1e-15):
-       
-       # Clip to prevent log(0)
-       x = np.clip(x, eps, 1 - eps)
-      
-       # Apply element-wise loss
-       loss = -np.sum(y * np.log(x), axis=1)
     
-       return np.mean(loss)
+       # Compute softmax probabilities
+       print(x.shape)
+       probs = Utility.softmax(x)
+       print(probs.shape)
+       # Cross-entropy loss
+       loss = -np.sum(y * np.log(probs +eps), axis=1)
 
+       # Gradient: Case 1
+       loss_derivative = probs - y
+       loss = np.mean(loss)
+
+       return loss, loss_derivative
+    
+    def one_hot_encoding(y, num_classes):
+        one_hot = np.zeros((y.size, num_classes))
+        one_hot[np.arange(y.size), y] = 1
+        return one_hot
+    
     def linear(*args):
         return 1
 
@@ -90,4 +105,3 @@ class Utility():
          if type(v) is not str:
             raise TypeError("Value must be a string, not {}".format(type(v).__name__))
       
-

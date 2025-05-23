@@ -252,8 +252,11 @@ class hugo_2_0():
             
             
 
-    def backward(self, x, y):
+    def backward(self, x, y, training = True):
+        print(self.loss)
         mse_loss, mse_grad = self.loss_methods[self.loss](x, y)
+        if training == False:
+            return mse_loss
         grad = mse_grad
         grad = np.clip(grad, -1, 1)
 
@@ -280,20 +283,20 @@ def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None,
       for i in range(epochs):
         print(f'EPOCH {i}')
         output_t = model.forward(input = X_training, training = True)
-        loss = model.backward(output_t, Y_training)
-        loss_over_epochs_t.append(loss)
+        loss_t = model.backward(output_t, Y_training)
+        loss_over_epochs_t.append(loss_t)
 
         # print(f'Output{output}')
         if isinstance(X_val, np.ndarray):
           output_v = model.forward(input = X_val, training = False)
-          val_mse_loss = np.mean((Y_val- output_v)**2)
-          loss_over_epochs_v.append(val_mse_loss)
+          loss_v = model.backward(output_v, Y_val, training = False)
+          loss_over_epochs_v.append(loss_v)
         else:
-          val_mse_loss = 0
+          loss_v = 0
           loss_over_epochs_v = [0]
   
-        print(f'training loss: {loss}\n')
-        print(f'VALIDATION loss: {val_mse_loss}\n')
+        print(f'training loss: {loss_t}\n')
+        print(f'VALIDATION loss: {loss_v}\n')
       if isinstance(X_val, np.ndarray):
         return loss_over_epochs_t, loss_over_epochs_v, output_t, output_v
       else:   
@@ -397,8 +400,8 @@ def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_upd
 #                  activation_functions = ['leaky relu','leaky relu','sigmoid'], lr_update_method = ['Hugo_lr_bonus','Hugo_lr_bonus','Hugo_lr_bonus']
 #                  weight_innitialization= [None, None, 'xavier'] )
 class Hugo():
-    def __init__(self, loss, weight_initialization, dropout):
-        self.model = hugo_2_0(loss = loss, weight_initialization = weight_initialization, dropout = dropout)
+    def __init__(self, loss, weight_initialization, dropout, lr):
+        self.model = hugo_2_0(loss = loss, weight_initialization = weight_initialization, dropout = dropout, lr = lr)
 
     def set_layers(self, model_nn, X, Y, neurons_num, density, activation_functions: list, lr_update_method: list, weight_initialization: list):
         self.set_up_layers = set_up_layers(X_training, Y_training, model_nn = model_nn,
@@ -406,8 +409,8 @@ class Hugo():
                  activation_functions = activation_functions, lr_update_method = lr_update_method, 
                  weight_initialization= weight_initialization)
         
-    def run(self, model_nn, epochs, X, Y):
-        self.run_model = run_model(model_nn, epochs, X, Y)
+    def run(self, model_nn, epochs, X, Y, X_val = None, Y_val = None):
+        self.run_model = run_model(model_nn, epochs, X, Y, X_val = X_val, Y_val = Y_val)
         return self.run_model
 
 if __name__ == "__main__":
