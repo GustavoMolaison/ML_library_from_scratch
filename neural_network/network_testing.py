@@ -150,14 +150,14 @@ layers = hugo.model.layers
    
 
 
-output_t = np.round(output_t).astype(int)
+# output_t = np.round(output_t).astype(int)
 accuracy_t = np.mean(output_t == y_train)
 
 print(f'rounded output training: {output_t}')
 print(f'training loss: {loss_over_epochs_t[-1]}')
 print(f'training accuracy: {accuracy_t}')
 print('\n')
-output_v = np.round(output_v).astype(int)
+# output_v = np.round(output_v).astype(int)
 accuracy_v = np.mean(output_v == y_test)
 print(f'rounded output validation: {output_v}')
 print(f'VALIDATION loss: {loss_over_epochs_v[-1]}')
