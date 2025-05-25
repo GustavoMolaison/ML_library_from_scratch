@@ -1,4 +1,5 @@
 import numpy as np
+np.set_printoptions(threshold=np.inf)
 
 class Utility():
     def __init__(self):
@@ -54,9 +55,10 @@ class Utility():
     def cross_entropy_loss(x, y, eps=1e-15):
     
        # Compute softmax probabilities
-       print(x.shape)
+       print(x)
        probs = Utility.softmax(x)
-       print(probs.shape)
+       print(probs)
+       quit()
        # Cross-entropy loss
        loss = -np.sum(y * np.log(probs +eps), axis=1)
 

@@ -2,6 +2,7 @@ import numpy as np
 from numpy import ndarray
 from numpy.lib.stride_tricks import sliding_window_view
 from hugo_utility import Utility as U 
+import random
 
 class Conv_layer():
         def __init__(self, model = None):
@@ -11,8 +12,12 @@ class Conv_layer():
            self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier}
 
 
-        def set_layer(self, param: ndarray, activation_function = 'none', weight_initialization = None, jump: int = 0):
-            self.param = param
+        def set_layer(self, param, activation_function = 'none', weight_initialization = None, jump: int = 0):
+            if isinstance(param, np.ndarray):
+              self.param = param
+            else:
+              self.param = np.random.uniform(-1, 1, param)
+
             self.bias = 0
             self.jump = jump
             self.activation_function = activation_function
@@ -100,7 +105,9 @@ class Conv_layer():
            
            self.bias_grad = np.ones(self.flatten.shape).sum()
            self.bias_grad =  np.clip(self.bias_grad, -1, 1)
-
+           print(self.flatten)
+           print('What')
+           quit()
            return self.flatten
 
         def backward_L(self, grad):
@@ -286,6 +293,8 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 # Calculating singe outputs from padded input using masks also saving all used masks/kernels
 def conv_ld(inp: ndarray, param: ndarray, bias: float,  jump: int = 0) -> ndarray:
     
+     
+
     input_pad = input_pad_calc(inp, param)
     # axis 0 is skipped because those are channels 
     patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (1, 2))

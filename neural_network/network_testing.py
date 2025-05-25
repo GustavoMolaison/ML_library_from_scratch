@@ -3,6 +3,7 @@ from hugo_conv import Conv_layer
 import numpy as np
 from hugo_utility import Utility as U
 
+
 X = np.array(
     [  # Sample 0 - like "1"
     [    [[0, 1, 0],
@@ -77,9 +78,13 @@ else:
         
         X = []
         for image_path in images_paths:
+          img = Image.open(image_path).convert('1')
           img = Image.open(image_path).convert('L')
           img = img.resize(IMAGE_SIZE) # Grayscale
+          # img_array = np.array(img, dtype=np.float32) 
           img_array = np.array(img, dtype=np.float32) / 255.0
+          print(img_array)
+          # quit()
           X.append(img_array)
 
         X = X = np.array(X).reshape(-1, 1, 28, 28)
@@ -90,7 +95,8 @@ else:
 # Split into train and test
 print(X.shape)
 print(y.shape)
-# quit()
+print(X[0])
+quit()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 X_train = X_train[: 50]
 y_train = y_train[: 50]
@@ -98,7 +104,8 @@ y_train = U.one_hot_encoding(y_train, 10)
 X_test = X_test[: 50]
 y_test = y_test[: 50]
 y_test = U.one_hot_encoding(y_test, 10)
-
+print(X_train)
+quit()
 print(X_train.shape)
 print(y_test.shape)
 # quit()
@@ -107,7 +114,7 @@ print(y_test.shape)
 hugo = Hugo(loss = 'cross_entropy', weight_initialization= 'he', dropout = False, lr = 0.0001)
 
 layer_conv = Conv_layer(model = hugo.model)
-layer_conv.set_layer(param = np.ones((3, 3)), weight_initialization = 'he', activation_function= 'none')
+layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none')
 hugo.model.add_layer(layer = layer_conv, dense = 1)
 
 layer_I = Dense_Layer(model = hugo.model)

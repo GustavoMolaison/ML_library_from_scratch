@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from hugo_utility import Utility as U 
+np.set_printoptions(threshold=np.inf)
 
 def dot_calc(x, w):
     output = np.dot(x, w)
@@ -271,6 +272,9 @@ class hugo_2_0():
            output = input
            for layer in self.layers:
               print('Layer Done!')
+              print('\n')
+              print(output)
+              quit()
               output = layer.forward_L(output, training)
            
            
@@ -280,10 +284,13 @@ class hugo_2_0():
 def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None, training = True):
       loss_over_epochs_t = []
       loss_over_epochs_v = [] 
+      print((X_training))
+      print('RUN MODEL')
+      quit()
       for i in range(epochs):
         print(f'EPOCH {i}')
         output_t = model.forward(input = X_training, training = True)
-        loss_t = model.backward(output_t, Y_training)
+        loss_t = model.backward(output_t, Y_training, training = True)
         loss_over_epochs_t.append(loss_t)
 
         # print(f'Output{output}')
