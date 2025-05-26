@@ -114,7 +114,7 @@ print(X_train.shape)
 print(y_test.shape)
 # quit()
 
-
+#  Here is my model syntax we can do it adding multiple layers to one model or run layers forward and backwards individually 
 hugo = Hugo(loss = 'cross_entropy', weight_initialization= 'he', dropout = False, lr = 0.0001)
 
 layer_conv = Conv_layer(model = hugo.model)
