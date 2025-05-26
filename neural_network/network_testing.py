@@ -2,7 +2,7 @@ from nn_1 import Hugo, Dense_Layer
 from hugo_conv import Conv_layer
 import numpy as np
 from hugo_utility import Utility as U
-
+import matplotlib.pyplot as plt
 
 X = np.array(
     [  # Sample 0 - like "1"
@@ -45,6 +45,7 @@ from PIL import Image
 import kagglehub
 from sklearn.model_selection import train_test_split
 
+# kagglehub.login()
 
 path = kagglehub.dataset_download("jcprogjava/handwritten-digits-dataset-not-in-mnist")
 print("Path to dataset files:", path)
@@ -78,11 +79,14 @@ else:
         
         X = []
         for image_path in images_paths:
-          img = Image.open(image_path).convert('1')
-          img = Image.open(image_path).convert('L')
-          img = img.resize(IMAGE_SIZE) # Grayscale
+          
+          img = Image.open(image_path)
+          # print(img)
+          # img = img.resize(IMAGE_SIZE) # Grayscale
           # img_array = np.array(img, dtype=np.float32) 
           img_array = np.array(img, dtype=np.float32) / 255.0
+          # plt.imshow(img_array, cmap='gray')
+          # plt.show()
           print(img_array)
           # quit()
           X.append(img_array)
@@ -96,7 +100,7 @@ else:
 print(X.shape)
 print(y.shape)
 print(X[0])
-quit()
+# quit()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 X_train = X_train[: 50]
 y_train = y_train[: 50]
