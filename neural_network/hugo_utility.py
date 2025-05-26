@@ -1,6 +1,7 @@
 import numpy as np
 np.set_printoptions(threshold=np.inf)
-
+# This file consinst all usefull function for deep learing its practical to take them from one place
+# Many could be taken from numpy but writing them by myself with a litte help of chat gpt helps me understand them 
 class Utility():
     def __init__(self):
         pass
