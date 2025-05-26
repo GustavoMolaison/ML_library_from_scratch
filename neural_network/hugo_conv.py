@@ -105,9 +105,7 @@ class Conv_layer():
            
            self.bias_grad = np.ones(self.flatten.shape).sum()
            self.bias_grad =  np.clip(self.bias_grad, -1, 1)
-           print(self.flatten)
-           print('What')
-           quit()
+           
            return self.flatten
 
         def backward_L(self, grad):
@@ -589,9 +587,7 @@ def weight_derivative(inp: ndarray, input_pad: ndarray, input_index: map_input_w
             
         #     # filling our np.zeros template
             weight_gradients[*index] = gradient
-    print(weight_grad)
-    print('\n')
-    print(weight_gradients)
+
     
     return weight_gradients
 

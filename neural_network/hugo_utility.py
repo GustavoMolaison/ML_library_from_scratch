@@ -55,10 +55,9 @@ class Utility():
     def cross_entropy_loss(x, y, eps=1e-15):
     
        # Compute softmax probabilities
-       print(x)
+       
        probs = Utility.softmax(x)
-       print(probs)
-       quit()
+       
        # Cross-entropy loss
        loss = -np.sum(y * np.log(probs +eps), axis=1)
 

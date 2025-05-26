@@ -272,9 +272,6 @@ class hugo_2_0():
            output = input
            for layer in self.layers:
               print('Layer Done!')
-              print('\n')
-              print(output)
-              quit()
               output = layer.forward_L(output, training)
            
            
@@ -284,10 +281,9 @@ class hugo_2_0():
 def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None, training = True):
       loss_over_epochs_t = []
       loss_over_epochs_v = [] 
-      print((X_training))
-      print('RUN MODEL')
-      quit()
+      import time
       for i in range(epochs):
+        start = time.perf_counter()
         print(f'EPOCH {i}')
         output_t = model.forward(input = X_training, training = True)
         loss_t = model.backward(output_t, Y_training, training = True)
@@ -304,6 +300,8 @@ def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None,
   
         print(f'training loss: {loss_t}\n')
         print(f'VALIDATION loss: {loss_v}\n')
+        end = time.perf_counter()
+        print(f"Execution time of epoch: {end - start:.4f} seconds")
       if isinstance(X_val, np.ndarray):
         return loss_over_epochs_t, loss_over_epochs_v, output_t, output_v
       else:   

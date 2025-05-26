@@ -97,21 +97,22 @@ else:
 
 
 # Split into train and test
+X = X[ : 107730]
 print(X.shape)
 print(y.shape)
-print(X[0])
 # quit()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-X_train = X_train[: 50]
-y_train = y_train[: 50]
-y_train = U.one_hot_encoding(y_train, 10)
-X_test = X_test[: 50]
-y_test = y_test[: 50]
-y_test = U.one_hot_encoding(y_test, 10)
-print(X_train)
-quit()
+X_train = X_train[: 20]
+y_train_b = y_train[: 20]
+y_train = U.one_hot_encoding(y_train_b, 10)
+X_test = X_test[: 20]
+y_test_b = y_test[: 20]
+y_test = U.one_hot_encoding(y_test_b, 10)
+# print(X_train[0])
+# print(y_test)
+# quit()
 print(X_train.shape)
-print(y_test.shape)
+print(y_train.shape)
 # quit()
 
 
@@ -141,7 +142,7 @@ hugo.model.add_layer(layer = layer_O, dense = 1)
 
 
 
-loss_over_epochs_t, loss_over_epochs_v, output_t, output_v = hugo.run(model_nn = hugo.model, epochs = 50, X = X_train, Y = y_train, X_val = X_test, Y_val = y_test)
+loss_over_epochs_t, loss_over_epochs_v, output_t, output_v = hugo.run(model_nn = hugo.model, epochs = 100, X = X_train, Y = y_train, X_val = X_test, Y_val = y_test)
 
 
 
@@ -162,14 +163,16 @@ layers = hugo.model.layers
 
 
 # output_t = np.round(output_t).astype(int)
-accuracy_t = np.mean(output_t == y_train)
+output_t = np.argmax(output_t, axis = 1)
+accuracy_t = np.mean(output_t == y_train_b)
 
 print(f'rounded output training: {output_t}')
 print(f'training loss: {loss_over_epochs_t[-1]}')
 print(f'training accuracy: {accuracy_t}')
 print('\n')
 # output_v = np.round(output_v).astype(int)
-accuracy_v = np.mean(output_v == y_test)
+output_v = np.argmax(output_v, axis = 1)
+accuracy_v = np.mean(output_v == y_test_b)
 print(f'rounded output validation: {output_v}')
 print(f'VALIDATION loss: {loss_over_epochs_v[-1]}')
 print(f'test accuracy: {accuracy_v}')
