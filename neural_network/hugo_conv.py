@@ -2,7 +2,7 @@ import numpy as np
 from numpy import ndarray
 from numpy.lib.stride_tricks import sliding_window_view
 from hugo_utility import Utility as U 
-import random
+
 
 class Conv_layer():
         def __init__(self, model = None):
@@ -10,20 +10,31 @@ class Conv_layer():
            self.layer_set = False
            self.activation_functions = {'none': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
            self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier}
+           self.clipping_methods = {'norm clipping': U.norm_clipping}
+           self.update_methods = {'gradient descent': U.basic_grad_update, 'SGD': U.SGD_momentum}
+           
+           
 
-
-        def set_layer(self, param, activation_function = 'none', weight_initialization = None, jump: int = 0):
+        def set_layer(self, param, activation_function = 'none', weight_initialization = None, update_method = 'gradient descent', jump: int = 0):
             if isinstance(param, np.ndarray):
               self.param = param
             else:
               self.param = np.random.uniform(-1, 1, param)
 
+            if update_method == 'gradient descent' and self.model !='gradient descent':
+                self.update_method = self.model.update_method
+            else:
+                self.update_method = update_method
+
             self.bias = 0
+            self.update_method = update_method
             self.jump = jump
             self.activation_function = activation_function
             self.layer_af_calc = self.activation_functions[activation_function]
             self.weight_initialization = weight_initialization
             self.layer_set = True
+            self.velocity_w = 0
+            self.velocity_b = 0
                  
            
         def forward_L(self, input, training):
@@ -93,12 +104,12 @@ class Conv_layer():
               self.weight_grads.append(weight_grad)
 
            self.input_grads = self.input_grads.reshape(self.input_grads.shape[0], -1)
-           self.input_grads = np.clip(self.input_grads, -1, 1)
+          #  self.input_grads = np.clip(self.input_grads, -1, 1)
 
            self.weight_grads = np.stack(self.weight_grads)
            
            self.weight_grads = np.reshape(self.weight_grads, (self.weight_grads.shape[0], -1))
-           self.weight_grads =  np.clip(self.weight_grads, -1, 1)
+          #  self.weight_grads =  np.clip(self.weight_grads, -1, 1)
           
            self.flatten = np.reshape(output, (output.shape[0], -1))
            self.flatten, self.af_gradient = self.layer_af_calc(self.flatten)
@@ -126,7 +137,9 @@ class Conv_layer():
 
            layer_bias_grad = np.sum(grad * self.bias_grad)
        
-           
+           self.velocity_w = self.update_methods[self.update_method](self.model.lr,  layer_weight_grad,  self.velocity_w)
+           self.velocity_b = self.update_methods[self.update_method](self.model.lr,  layer_bias_grad,    self.velocity_b)
+
            self.param -= layer_weight_grad * self.model.lr
            self.bias -= layer_bias_grad * self.model.lr
            layer_input_grad = np.dot(grad, self.input_grads.T)

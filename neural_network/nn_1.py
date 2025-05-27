@@ -86,17 +86,19 @@ class Dense_Layer():
             self.model = model
             self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
             self.loss_methods = {'mse': mse_loss, 'cross_entropy': U.cross_entropy_loss}
+            self.update_methods = {'gradient descent': U.basic_grad_update, 'SGD': U.SGD_momentum}
             # self.loss = loss
             # self.lr = lr
             self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
+            
             pass
 
-        def set_layer(self, neurons_num: int, activation_function: str, weight_initialization = None, lr_update_method = 'none', input_features = None):
+        def set_layer(self, neurons_num: int, activation_function: str, weight_initialization = None, update_method = 'gradient descent', input_features = None):
 
             self.neurons_num = neurons_num
             self.input_features = input_features
             self.activation_function = activation_function
-
+            # this part of code sets parameters using outer model class if user didnt set them individually for layer
             if weight_initialization == None and self.model != None:
                 self.weight_initialization = self.model.weights_initialization
             else:
@@ -105,6 +107,10 @@ class Dense_Layer():
                    raise LookupError
                 self.weight_initialization = weight_initialization
             
+            if update_method == 'gradient descent' and self.model !='gradient descent':
+                self.update_method = self.model.update_method
+            else:
+                self.update_method = update_method
             
             
             # self.layer_weights = np.random.uniform(-1, 1, (input_features, neurons_num))
@@ -116,7 +122,8 @@ class Dense_Layer():
             # self.layer_weights = np.array([[3]], dtype= 'float64')
             self.dead_neurons = False
             self.lr_bonus = 0
-            self.lr_update_method = lr_update_method
+            self.velocity_w = 0
+            self.velocity_b = 0
             self.input_grads = []
             self.weights_ac_epo = []
             
@@ -184,39 +191,34 @@ class Dense_Layer():
             # print(layer_weight_grad * (self.model.lr + self.lr_update(layer_weight_grad)))
             # print(self.model.lr)
             # print(layer_weight_grad)
-            # 
-            self.layer_weights -= layer_weight_grad * (self.model.lr + self.lr_update(layer_weight_grad))
-            # print(f'{self.layer_weights}\n')
-            # print(f'{self.layer_weights[0]}\n')
-            # print(t_w)
+            # velocity is gradient just diffrent name
+            # here is chossen momentum optimizers being used  
+            # lr have to be frist parameter and grad second cause of args basic_grad_update function remember!
+            self.velocity_w = self.update_methods[self.update_method](self.model.lr,  layer_weight_grad,  self.velocity_w)
+            self.velocity_b = self.update_methods[self.update_method](self.model.lr,  layer_bias_grad,    self.velocity_b)
 
-
-            # quit()
-
-            self.layer_bias -= layer_bias_grad * (self.model.lr + self.lr_update(layer_bias_grad))
-           
+            self.layer_weights -= self.velocity_w
+            self.layer_bias -= self.velocity_b
+            # self.layer_weights -= layer_weight_grad * self.model.lr * self.lr_update_methods
+          
+          
+            # self.layer_bias -= layer_bias_grad * self.model.lr  
             
             
             return layer_input_grad
     
-        def lr_update(self, grad):
-            if self.lr_update_method == 'none':
-                return 0
-            
-            if self.lr_update_method == 'Hugo_lr_bonus':
-              self.lr_bonus += np.mean(np.abs(grad))  * self.model.lr**2 * 0.1
-              self.lr_bonus = np.clip(self.lr_bonus, -self.model.lr, self.model.lr)
-              return self.lr_bonus
+        
 
     
 
 class hugo_2_0():
-    def __init__(self, loss, weight_initialization = 'none', lr = 0.001, dropout = False, dropout_alpha = 0.5):
+    def __init__(self, loss, weight_initialization = 'none', clip_method ='norm clipping', update_method = 'gradient descent', lr = 0.001, dropout = False, dropout_alpha = 0.5, max_grad = 1):
         value_f(lr, dropout_alpha)
         value_s(loss, weight_initialization)
         value_b(dropout)
         self.activation_functions = {'none': no_activation_function, 'sigmoid' : sigmoid, 'relu' : relu, 'leaky relu': leaky_relu, 'tanh': tanh}
         self.loss_methods = {'mse': mse_loss, 'cross_entropy': U.cross_entropy_loss}
+        self.clipping_methods = {'norm clipping': U.norm_clipping}
         self.loss = loss
         self.lr = lr
         self.weights_initializations = {'linear' : linear, 'he' : he, 'xavier': xavier}
@@ -224,6 +226,9 @@ class hugo_2_0():
         self.layers = []
         self.dropout = dropout
         self.dropout_alpha = dropout_alpha
+        self.update_method = update_method
+        self.clip_method = clip_method
+        self.max_grad = max_grad
         pass
 
     def info(self):
@@ -259,12 +264,13 @@ class hugo_2_0():
         if training == False:
             return mse_loss
         grad = mse_grad
-        grad = np.clip(grad, -1, 1)
+        grad = self.clipping_methods[self.clip_method](grad, self.max_grad)
+        
 
         for layer in reversed(self.layers):
             
             grad = layer.backward_L(grad)
-            grad = np.clip(grad, -1, 1)
+            grad = self.clipping_methods[self.clip_method](grad, self.max_grad)
            
         return mse_loss    
     
@@ -388,15 +394,15 @@ def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_upd
         
 
         layer_I = Dense_Layer(model = model_nn)
-        layer_I.set_layer(input_features= X.shape[1], neurons_num = neurons_num, activation_function= activation_functions[0], weight_initialization = weight_initialization[0], lr_update_method = lr_update_method[0])
+        layer_I.set_layer(input_features= X.shape[1], neurons_num = neurons_num, activation_function= activation_functions[0], weight_initialization = weight_initialization[0], update_method = lr_update_method[0])
         model_nn.add_layer(layer_I) 
 
         dense = Dense_Layer(model = model_nn)
-        dense.set_layer(input_features = neurons_num, neurons_num = neurons_num, activation_function= activation_functions[1], weight_initialization = weight_initialization[1], lr_update_method = lr_update_method[1])
+        dense.set_layer(input_features = neurons_num, neurons_num = neurons_num, activation_function= activation_functions[1], weight_initialization = weight_initialization[1], update_method = lr_update_method[1])
         model_nn.add_layer(dense, dense = density) 
 
         layer_0 = Dense_Layer(model = model_nn)
-        layer_0.set_layer(input_features = 64, neurons_num = Y.shape[1], activation_function= activation_functions[2], weight_initialization = weight_initialization[2], lr_update_method = lr_update_method[2])
+        layer_0.set_layer(input_features = 64, neurons_num = Y.shape[1], activation_function= activation_functions[2], weight_initialization = weight_initialization[2], update_method = lr_update_method[2])
         model_nn.add_layer(layer_0, dense = 1) 
 
 # model_uno = hugo_2_0(loss = 'mse', weight_initialization= 'linear')
@@ -405,8 +411,8 @@ def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_upd
 #                  activation_functions = ['leaky relu','leaky relu','sigmoid'], lr_update_method = ['Hugo_lr_bonus','Hugo_lr_bonus','Hugo_lr_bonus']
 #                  weight_innitialization= [None, None, 'xavier'] )
 class Hugo():
-    def __init__(self, loss, weight_initialization, dropout, lr):
-        self.model = hugo_2_0(loss = loss, weight_initialization = weight_initialization, dropout = dropout, lr = lr)
+    def __init__(self, loss, weight_initialization, dropout, lr, clip_method = 'norm clipping', update_method = 'gradient descent'):
+        self.model = hugo_2_0(loss = loss, update_method= update_method, weight_initialization = weight_initialization, dropout = dropout, lr = lr)
 
     def set_layers(self, model_nn, X, Y, neurons_num, density, activation_functions: list, lr_update_method: list, weight_initialization: list):
         self.set_up_layers = set_up_layers(X_training, Y_training, model_nn = model_nn,
@@ -423,7 +429,7 @@ if __name__ == "__main__":
 
      set_up_layers(X_training, Y_training, model_nn = model_dos,
                  neurons_num = 64, density = 1,
-                 activation_functions = ['leaky relu','leaky relu','leaky relu'], lr_update_method = ['none','none','none'], 
+                 activation_functions = ['leaky relu','leaky relu','leaky relu'], lr_update_method = ['SGD','SGD','SGD'], 
                  weight_initialization= ['he', 'he', 'he'])
 
 

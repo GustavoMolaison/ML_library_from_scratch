@@ -6,6 +6,18 @@ class Utility():
     def __init__(self):
         pass
 
+    def basic_grad_update(*args):
+        return args[0] * args[1]
+    
+    def SGD_momentum(lr, grad, prev_velocity):
+        return 0.9 * prev_velocity + lr * grad
+        
+    def norm_clipping(grad, limit = 1):
+        norm = np.sqrt(np.sum(grad ** 2))
+        if norm > limit:
+            grad = grad * (limit/norm)
+        return grad
+        
     def dot_calc(x, w):
         output = np.dot(x, w)
         derivative = x
