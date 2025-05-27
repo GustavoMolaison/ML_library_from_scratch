@@ -2,6 +2,7 @@ import numpy as np
 from numpy import ndarray
 from numpy.lib.stride_tricks import sliding_window_view
 from hugo_utility import Utility as U 
+import time
 
 
 class Conv_layer():
@@ -21,7 +22,7 @@ class Conv_layer():
             else:
               self.param = np.random.uniform(-1, 1, param)
 
-            if update_method == 'gradient descent' and self.model !='gradient descent':
+            if update_method == 'gradient descent' and self.model.update_method !='gradient descent':
                 self.update_method = self.model.update_method
             else:
                 self.update_method = update_method
@@ -53,55 +54,60 @@ class Conv_layer():
            self.weight_grads = []
           
            import time
-           for sample_idx, sample in enumerate(input):
+           
+          #quit()
+          #for sample_idx, sample in enumerate(input):
+           
               
-              if training == False:
-                 output_sample, input_pad, kernels = conv_ld(inp = sample, param =self.param, bias = self.bias, jump = self.jump)
-                #  print(output_sample)
-                 if np.isnan(output_sample).any():
-                    print('Nans in output')
-                    quit()
-                 output[sample_idx] = output_sample
-            #   print('Conv_sample Done!')
-              start = time.perf_counter()
-              # Calculating new values after aplying kernels to padded data along with kernels and input pad
-              output_sample, input_pad, kernels = conv_ld(inp = sample, param =self.param, bias = self.bias, jump = self.jump)
-              end = time.perf_counter()
-            #   print(f"Execution time conv_ld: {end - start:.4f} seconds")
-              # weights sorted only by channels (3, number of weights for channel)
-              kernels = np.reshape(kernels, (kernels.shape[0],  kernels.shape[1] *  kernels.shape[2] * kernels.shape[3] * kernels.shape[4]))
+          #  if training == False:
+          #    output_sample, input_pad, kernels = conv_ld(inp = sample, param =self.param, bias = self.bias, jump = self.jump)
+          #   #  print(output_sample)
+          #    if np.isnan(output_sample).any():
+          #       print('Nans in output')
+          #       quit()
+          #  output[sample_idx] = output_sample
+          #   print('Conv_sample Done!')
+           start = time.perf_counter()
+          # Calculating new values after aplying kernels to padded data along with kernels and input pad
+           output_sample, input_pad, kernels = conv_ld(inp = input, param =self.param, bias = self.bias, jump = self.jump)
+           end = time.perf_counter()
+          # print(f"Execution time conv_ld: {end - start:.4f} seconds")
+          # weights sorted only by channels (3, number of weights for channel)
+           kernels = np.reshape(kernels, (kernels.shape[0],  kernels.shape[1] *  kernels.shape[2] * kernels.shape[3] * kernels.shape[4]))
               
                                                              #Pre_backward
-              # mapping to what input each weight is connected(returns dict)
-              start = time.perf_counter()
-              weight_grad = map_input_weight_matrix(sample, self.param, input_pad, kernels, kernels, map_key = 'weight')
-              end = time.perf_counter()
-            #   print(f"Execution time map_input_weight_matrix: {end - start:.4f} seconds")
+          # mapping to what input each weight is connected(returns dict)
+           start = time.perf_counter()
+           weight_grad = map_input_weight_matrix(input, self.param, input_pad, kernels, kernels, map_key = 'weight')
+           end = time.perf_counter()
+           print(f"Execution time map_input_weight_matrix: {end - start:.4f} seconds")
 
-              # mapping to what weight each input is connected(returns dict)
-              start = time.perf_counter()
-              input_index = map_input_weight_matrix(sample, self.param, input_pad, kernels, kernels,  map_key = 'input')
-              end = time.perf_counter()
-            #   print(f"Execution time map_input_weight_matrix: {end - start:.4f} seconds")
-              # calculates how each input influence the output
-              start = time.perf_counter()
-              input_grad = input_derivative(sample, input_pad, input_index, kernels, self.param)
-              end = time.perf_counter()
-            #   print(f"Execution time input_derivative: {end - start:.4f} seconds")
+          # mapping to what weight each input is connected(returns dict)
+           start = time.perf_counter()
+           input_index = map_input_weight_matrix(inputn, self.param, input_pad, kernels, kernels,  map_key = 'input')
+           end = time.perf_counter()
+           print(f"Execution time map_input_weight_matrix: {end - start:.4f} seconds")
+         # calculates how each input influence the output
+           start = time.perf_counter()
+           input_grad = input_derivative(input, input_pad, input_index, kernels, self.param)
+           end = time.perf_counter()
+           print(f"Execution time input_derivative: {end - start:.4f} seconds")
+           print('\n')
+              # print('\n')
               # calculates how each weight thus param influence the output
-            #   start = time.perf_counter()
+              # start = time.perf_counter()
             #   weight_grad = weight_derivative(sample, input_pad, weight_index, kernels)
             #   end = time.perf_counter()
             #   print(f"Execution time weight_derivative: {end - start:.4f} seconds")
               # adds up grads from all kernels into one kernel  
             
               
-              output[sample_idx] = output_sample
-              self.input_grads[sample_idx] = input_grad
+              # output[sample_idx] = output_sample
+              # self.input_grads[sample_idx] = input_grad
               
             
          
-              self.weight_grads.append(weight_grad)
+              # self.weight_grads.append(weight_grad)
 
            self.input_grads = self.input_grads.reshape(self.input_grads.shape[0], -1)
           #  self.input_grads = np.clip(self.input_grads, -1, 1)
@@ -121,6 +127,7 @@ class Conv_layer():
 
         def backward_L(self, grad):
            
+           start = time.perf_counter()
            if self.layer_set != True:
               print('Conv_layer is not set. Use "Conv_layer.set_layer" before anything else!')
               raise LookupError()
@@ -143,6 +150,10 @@ class Conv_layer():
            self.param -= layer_weight_grad * self.model.lr
            self.bias -= layer_bias_grad * self.model.lr
            layer_input_grad = np.dot(grad, self.input_grads.T)
+
+           end = time.perf_counter()
+           print(f"Execution time backward: {end - start:.4f} seconds")
+           quit()
 
            return layer_input_grad
 
@@ -247,8 +258,7 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     
     channels_combined_list = []
-    # print(inp.shape)
-    # quit()
+    
     for inx, channel in enumerate(inp):
         
         
@@ -304,20 +314,22 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 # Calculating singe outputs from padded input using masks also saving all used masks/kernels
 def conv_ld(inp: ndarray, param: ndarray, bias: float,  jump: int = 0) -> ndarray:
     
-     
+   
 
-    input_pad = input_pad_calc(inp, param)
+    input_pad = input_pad_calc(inp[0], param)
     # axis 0 is skipped because those are channels 
     patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (1, 2))
     
     output = np.einsum('cijxy,xy->cij', patches, param)
-   
+    
     output = output + bias
     
 
     kernels = patches * param
-    
-
+    print(inp.shape)
+    im2col_matrix =  np.reshape(output, (inp.shape[0] * output.shape[0] * output.shape[1], inp.shape[1] * param.shape[0] * param.shape[0]))
+    print(im2col_matrix.shape)
+    quit()
     return output, input_pad, kernels
 
 

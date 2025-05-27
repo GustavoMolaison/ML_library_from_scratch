@@ -276,9 +276,13 @@ class hugo_2_0():
     
     def forward(self, input, training):
            output = input
+           import time
            for layer in self.layers:
               print('Layer Done!')
+              start = time.perf_counter()
               output = layer.forward_L(output, training)
+              end = time.perf_counter()
+              print(f"Execution time {layer}: {end - start:.4f} seconds")
            
            
            return output     
