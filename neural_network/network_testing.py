@@ -123,11 +123,11 @@ layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_fun
 hugo.model.add_layer(layer = layer_conv, dense = 1)
 
 layer_I = Dense_Layer(model = hugo.model)
-layer_I.set_layer(neurons_num=64, activation_function = 'leaky relu', weight_initialization= 'he')
+layer_I.set_layer(neurons_num=64, activation_function = 'tanh', weight_initialization= 'he')
 hugo.model.add_layer(layer = layer_I, dense = 1)
 
 layer_D = Dense_Layer(model = hugo.model)
-layer_D.set_layer(neurons_num=64, activation_function = 'leaky relu', weight_initialization= 'he')
+layer_D.set_layer(neurons_num=64, activation_function = 'tanh', weight_initialization= 'he')
 hugo.model.add_layer(layer = layer_D, dense = 1)
 
 layer_O = Dense_Layer(model = hugo.model)
