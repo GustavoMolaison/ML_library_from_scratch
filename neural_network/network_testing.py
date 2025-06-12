@@ -1,7 +1,8 @@
-from nn_1 import Hugo, Dense_Layer
-from hugo_conv import Conv_layer
+from layers.hugo_dense import Dense_Layer
+from models.Sequential import Hugo
+from layers.hugo_conv import Conv_layer
 import numpy as np
-from hugo_utility import Utility as U
+from utils.hugo_utility import Utility as U
 import matplotlib.pyplot as plt
 
 X = np.array(

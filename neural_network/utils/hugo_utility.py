@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import ndarray
 np.set_printoptions(threshold=np.inf)
 # This file consinst all usefull function for deep learing its practical to take them from one place
 # Many could be taken from numpy but writing them by myself with a litte help of chat gpt helps me understand them 
@@ -6,6 +7,16 @@ class Utility():
     def __init__(self):
         pass
 
+    def dot_calc(x, w):
+        output = np.dot(x, w)
+        derivative = x
+        return output, derivative
+
+    def bias_calc(x, b):
+        output = x + b
+        derivative = 1
+        return output, derivative
+    
     def basic_grad_update(*args):
         return args[0] * args[1]
     
@@ -119,3 +130,35 @@ class Utility():
          if type(v) is not str:
             raise TypeError("Value must be a string, not {}".format(type(v).__name__))
       
+    def pad_to_shape(arr, target, pad_value=0):
+        print(target)
+        print(arr)
+        
+        row_diff = target.shape[0] - arr.shape[0]
+        print(row_diff)
+        
+        column_diff = target.shape[1] - arr.shape[1]
+        # print(row_diff)
+        # quit()
+        pad_row = (row_diff // 2, row_diff // 2)
+        if row_diff % 2 != 0:
+            pad_row = (row_diff // 2 + 1, row_diff // 2)
+        
+         
+        pad_column = (column_diff // 2, column_diff // 2) 
+        if column_diff % 2 != 0:
+            pad_column = (column_diff // 2 + 1, column_diff // 2)
+       
+
+        return np.pad(arr,  (pad_row, pad_column), constant_values=pad_value)
+    
+
+    def pad_batch(samples, example, pad_value=0):
+     
+    #  samples = np.vstack(samples)
+    #  example = np.vstack(example)
+    #  print(samples.shape)
+    #  print(example.shape)
+    #  quit()
+    # "Pad a list of arrays to the same shape (max of each dimension)."
+     return np.array([Utility.pad_to_shape(s, example[0], pad_value) for s in samples])

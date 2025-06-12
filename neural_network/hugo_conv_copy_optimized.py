@@ -2,7 +2,7 @@
 import numpy as np
 from numpy import ndarray
 from numpy.lib.stride_tricks import sliding_window_view
-from hugo_utility import Utility as U 
+from utils.hugo_utility import Utility as U 
 import time
 
 
@@ -42,7 +42,7 @@ class Conv_layer():
         def forward_L(self, input, training):
            
            if input.ndim != 4:
-              print(f'Input to conv_layer must be shape (Sample, channels, widht, height).\n Not {input.shape} ')
+              print(f'Input to conv_layer must be shape (Samples, channels, widht, height).\n Not {input.shape} ')
               raise LookupError()
 
            if self.layer_set != True:
@@ -55,19 +55,10 @@ class Conv_layer():
            self.weight_grads = []
           
            import time
+        
+        
+           print(input.shape)
            
-          #quit()
-          #for sample_idx, sample in enumerate(input):
-           
-              
-          #  if training == False:
-          #    output_sample, input_pad, kernels = conv_ld(inp = sample, param =self.param, bias = self.bias, jump = self.jump)
-          #   #  print(output_sample)
-          #    if np.isnan(output_sample).any():
-          #       print('Nans in output')
-          #       quit()
-          #  output[sample_idx] = output_sample
-          #   print('Conv_sample Done!')
            start = time.perf_counter()
           # Calculating new values after aplying kernels to padded data along with kernels and input pad
            output_sample, input_pad, kernels = conv_ld(inp = input, param =self.param, bias = self.bias, jump = self.jump)
@@ -85,7 +76,7 @@ class Conv_layer():
 
           # mapping to what weight each input is connected(returns dict)
            start = time.perf_counter()
-           input_index = map_input_weight_matrix(inputn, self.param, input_pad, kernels, kernels,  map_key = 'input')
+           input_index = map_input_weight_matrix(input, self.param, input_pad, kernels, kernels,  map_key = 'input')
            end = time.perf_counter()
            print(f"Execution time map_input_weight_matrix: {end - start:.4f} seconds")
          # calculates how each input influence the output
@@ -94,21 +85,9 @@ class Conv_layer():
            end = time.perf_counter()
            print(f"Execution time input_derivative: {end - start:.4f} seconds")
            print('\n')
-              # print('\n')
-              # calculates how each weight thus param influence the output
-              # start = time.perf_counter()
-            #   weight_grad = weight_derivative(sample, input_pad, weight_index, kernels)
-            #   end = time.perf_counter()
-            #   print(f"Execution time weight_derivative: {end - start:.4f} seconds")
-              # adds up grads from all kernels into one kernel  
-            
               
-              # output[sample_idx] = output_sample
-              # self.input_grads[sample_idx] = input_grad
-              
-            
-         
-              # self.weight_grads.append(weight_grad)
+
+
 
            self.input_grads = self.input_grads.reshape(self.input_grads.shape[0], -1)
           #  self.input_grads = np.clip(self.input_grads, -1, 1)
@@ -255,16 +234,9 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
      # filling entry data
     param_len_0 = param.shape[0]
     param_len_1 = param.shape[1]
-    
-    
-    
+
     channels_combined_list = []
-    
-    for inx, channel in enumerate(inp):
-        
-        
-        
-        
+    for inx, channel in enumerate(inp[0]):
 
         channel_pad_list = []
         
@@ -286,8 +258,15 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     
     channels_combined = np.stack(channels_combined_list)
+    print(channels_combined.shape)
+    samples = np.vstack(inp)
+    padded_batch = U.pad_batch(samples = samples, example = channels_combined)
+    padded_batch = np.reshape(padded_batch, (inp.shape[0], inp.shape[1], padded_batch.shape[1], padded_batch.shape[2]))
+    print(inp.shape)
+    print(padded_batch.shape)
+    quit()
     
-    return channels_combined
+    return padded_batch
 
    
 
@@ -316,10 +295,14 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 def conv_ld(inp: ndarray, param: ndarray, bias: float,  jump: int = 0) -> ndarray:
     
    
-
-    input_pad = input_pad_calc(inp[0], param)
+    print(inp)
+    # quit()
+    # padding done
+    input_pad = input_pad_calc(inp, param)
     # axis 0 is skipped because those are channels 
     patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (1, 2))
+    print(patches)
+    quit()
     
     output = np.einsum('cijxy,xy->cij', patches, param)
     
@@ -751,6 +734,51 @@ def sum_param_gradients(sample_derivative_list: list) -> ndarray:
 
    
 if __name__ == "__main__":
+  input_1d = np.array([[[[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]]],
+                     
+                     [[[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]]],
+
+                     [[[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]],
+
+                     [[1,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5],
+                     [5,2,3,4,5]]]])
+  
   layer = Conv_layer()
   layer.set_layer(param = param_1d)
   flatten = layer.forward_L(input_1d, training = True)

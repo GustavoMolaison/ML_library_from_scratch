@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import ndarray
 from numpy.lib.stride_tricks import sliding_window_view
-from hugo_utility import Utility as U 
+from utils.hugo_utility import Utility as U 
 import time
 
 
@@ -103,8 +103,7 @@ class Conv_layer():
               output[sample_idx] = output_sample
               self.input_grads[sample_idx] = input_grad
               
-            
-         
+
               self.weight_grads.append(weight_grad)
 
            self.input_grads = self.input_grads.reshape(self.input_grads.shape[0], -1)
