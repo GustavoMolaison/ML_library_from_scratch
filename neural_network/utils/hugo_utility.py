@@ -131,11 +131,10 @@ class Utility():
             raise TypeError("Value must be a string, not {}".format(type(v).__name__))
       
     def pad_to_shape(arr, target, pad_value=0):
-        print(target)
-        print(arr)
+        
         
         row_diff = target.shape[0] - arr.shape[0]
-        print(row_diff)
+        
         
         column_diff = target.shape[1] - arr.shape[1]
         # print(row_diff)

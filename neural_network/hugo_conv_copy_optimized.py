@@ -17,7 +17,7 @@ class Conv_layer():
            
            
 
-        def set_layer(self, param, activation_function = 'none', weight_initialization = None, update_method = 'gradient descent', jump: int = 0):
+        def set_layer(self, param, activation_function = 'none', weight_initialization = None, update_method = 'gradient descent', jump: int = 0, filters: int = 1):
             if isinstance(param, np.ndarray):
               self.param = param
             else:
@@ -34,6 +34,7 @@ class Conv_layer():
             self.activation_function = activation_function
             self.layer_af_calc = self.activation_functions[activation_function]
             self.weight_initialization = weight_initialization
+            self.filters = filters
             self.layer_set = True
             self.velocity_w = 0
             self.velocity_b = 0
@@ -57,52 +58,19 @@ class Conv_layer():
            import time
         
         
-           print(input.shape)
+  
            
-           start = time.perf_counter()
+          
           # Calculating new values after aplying kernels to padded data along with kernels and input pad
-           output_sample, input_pad, kernels = conv_ld(inp = input, param =self.param, bias = self.bias, jump = self.jump)
-           end = time.perf_counter()
-          # print(f"Execution time conv_ld: {end - start:.4f} seconds")
-          # weights sorted only by channels (3, number of weights for channel)
-           kernels = np.reshape(kernels, (kernels.shape[0],  kernels.shape[1] *  kernels.shape[2] * kernels.shape[3] * kernels.shape[4]))
-              
-                                                             #Pre_backward
-          # mapping to what input each weight is connected(returns dict)
-           start = time.perf_counter()
-           weight_grad = map_input_weight_matrix(input, self.param, input_pad, kernels, kernels, map_key = 'weight')
-           end = time.perf_counter()
-           print(f"Execution time map_input_weight_matrix: {end - start:.4f} seconds")
-
-          # mapping to what weight each input is connected(returns dict)
-           start = time.perf_counter()
-           input_index = map_input_weight_matrix(input, self.param, input_pad, kernels, kernels,  map_key = 'input')
-           end = time.perf_counter()
-           print(f"Execution time map_input_weight_matrix: {end - start:.4f} seconds")
-         # calculates how each input influence the output
-           start = time.perf_counter()
-           input_grad = input_derivative(input, input_pad, input_index, kernels, self.param)
-           end = time.perf_counter()
-           print(f"Execution time input_derivative: {end - start:.4f} seconds")
-           print('\n')
-              
-
-
-
-           self.input_grads = self.input_grads.reshape(self.input_grads.shape[0], -1)
-          #  self.input_grads = np.clip(self.input_grads, -1, 1)
-
-           self.weight_grads = np.stack(self.weight_grads)
+           output_sample, input_pad, self.patches = conv_ld(inp = input, param =self.param, bias = self.bias, jump = self.jump, filters_amount= self.filters)
            
-           self.weight_grads = np.reshape(self.weight_grads, (self.weight_grads.shape[0], -1))
-          #  self.weight_grads =  np.clip(self.weight_grads, -1, 1)
+              
+
           
            self.flatten = np.reshape(output, (output.shape[0], -1))
            self.flatten, self.af_gradient = self.layer_af_calc(self.flatten)
            
-           self.bias_grad = np.ones(self.flatten.shape).sum()
-           self.bias_grad =  np.clip(self.bias_grad, -1, 1)
-           
+         
            return self.flatten
 
         def backward_L(self, grad):
@@ -114,36 +82,42 @@ class Conv_layer():
            
            
            grad = grad * self.af_gradient
+
+           grad = np.reshape(grad, grad.shape[0], -1)
            
-           
+           layer_weight_grad = np.dot(grad, self.patches.T)
           
          
-           layer_weight_grad = np.dot(self.weight_grads.T, grad)
-           layer_weight_grad = np.reshape(layer_weight_grad, (-1, *self.param.shape))
-           layer_weight_grad = layer_weight_grad.sum(axis = 0)
+        #    layer_weight_grad = np.dot(self.weight_grads.T, grad)
+        #    layer_weight_grad = np.reshape(layer_weight_grad, (-1, *self.param.shape))
+        #    layer_weight_grad = layer_weight_grad.sum(axis = 0)
 
-           layer_bias_grad = np.sum(grad * self.bias_grad)
+        #    layer_bias_grad = np.sum(grad * self.bias_grad)
        
-           self.velocity_w = self.update_methods[self.update_method](self.model.lr,  layer_weight_grad,  self.velocity_w)
-           self.velocity_b = self.update_methods[self.update_method](self.model.lr,  layer_bias_grad,    self.velocity_b)
+        #    self.velocity_w = self.update_methods[self.update_method](self.model.lr,  layer_weight_grad,  self.velocity_w)
+        #    self.velocity_b = self.update_methods[self.update_method](self.model.lr,  layer_bias_grad,    self.velocity_b)
 
-           self.param -= layer_weight_grad * self.model.lr
-           self.bias -= layer_bias_grad * self.model.lr
-           layer_input_grad = np.dot(grad, self.input_grads.T)
+        #    self.param -= layer_weight_grad * self.model.lr
+        #    self.bias -= layer_bias_grad * self.model.lr
+        #    layer_input_grad = np.dot(grad, self.input_grads.T)
 
-           end = time.perf_counter()
-           print(f"Execution time backward: {end - start:.4f} seconds")
-           quit()
+        #    end = time.perf_counter()
+        #    print(f"Execution time backward: {end - start:.4f} seconds")
+        #    quit()
 
            return layer_input_grad
 
            
-           
+        def conv_gradients()
            
         
         def get_info(self):
             print(f'self.kernels{self.kernels.shape}')
             print(f'self.kernels_weights{self.kernels_weights.shape}')
+
+
+def conv_derivative():
+    
 
 
 
@@ -258,13 +232,10 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     
     channels_combined = np.stack(channels_combined_list)
-    print(channels_combined.shape)
+    
     samples = np.vstack(inp)
     padded_batch = U.pad_batch(samples = samples, example = channels_combined)
     padded_batch = np.reshape(padded_batch, (inp.shape[0], inp.shape[1], padded_batch.shape[1], padded_batch.shape[2]))
-    print(inp.shape)
-    print(padded_batch.shape)
-    quit()
     
     return padded_batch
 
@@ -292,29 +263,20 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 # PURPOUSE#######
 # CHECK? -> WORKING V
 # Calculating singe outputs from padded input using masks also saving all used masks/kernels
-def conv_ld(inp: ndarray, param: ndarray, bias: float,  jump: int = 0) -> ndarray:
-    
-   
-    print(inp)
-    # quit()
-    # padding done
-    input_pad = input_pad_calc(inp, param)
-    # axis 0 is skipped because those are channels 
-    patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (1, 2))
-    print(patches)
-    quit()
-    
-    output = np.einsum('cijxy,xy->cij', patches, param)
-    
-    output = output + bias
-    
+def conv_ld(inp: ndarray, param: ndarray, bias: float, filters_amount: int = 1,  jump: int = 0) -> ndarray:
+#  SEQUENTIAL
+   param_flat = param.flatten()
+   output = inp
 
-    kernels = patches * param
-    print(inp.shape)
-    im2col_matrix =  np.reshape(output, (inp.shape[0] * output.shape[0] * output.shape[1], inp.shape[1] * param.shape[0] * param.shape[0]))
-    print(im2col_matrix.shape)
-    quit()
-    return output, input_pad, kernels
+   for filters_num in range(filters_amount):
+    input_pad = input_pad_calc(output, param)
+    patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (2, 3))
+    patches = np.reshape(patches, (patches.size // param.size, param.size))
+    output = np.dot(patches, param_flat)
+    output = output + bias
+   
+  
+   return output, input_pad, patches
 
 
 
@@ -322,48 +284,10 @@ def conv_ld(inp: ndarray, param: ndarray, bias: float,  jump: int = 0) -> ndarra
 
                                           # OLD ORIGINAL SLOW IMPLEMENTATION
     # initilization of entry data
-#     input_pad  = input_pad_calc(inp, param)
-#     channels_amount = inp.shape[0]
-# #   "+ input_pad.ndim" is making sure code works with multiple channels and singe channel so its just shape[].
-# #   These two rows below calculates how many kernels will fit in shape[0] and [1].
-#     param_in_row = (input_pad.shape[(-2 + input_pad.ndim)] - (param.shape[0] - 1))
-#     param_in_columns =  (input_pad.shape[(-1 + input_pad.ndim)] - (param.shape[1] - 1))
-#     # Calculating how many kernels will be in our data.
-#     # Param in row * param in columns is total sum of kernels we gonna need, shapes are just well, shapes of kernel.
-#     kernels = np.zeros((channels_amount, param_in_row, param_in_columns, param.shape[0], param.shape[1]))
-#     # Here are stored channels cause each will be calculated seperatly.
-#     # Note that kernels are saved all in once. 
-#     channels_combined = []
-#     # We are looping for each channel both padded and unpadded.
-#     # Note that kernels are saved all in once its easier than nesting another loop.
-#     # To clarify we loop for channels in terms of input, kernels are saved all in once this is standard in this code.
-#     for channel_idx, (channel, out_array_computed) in enumerate(zip(input_pad, np.zeros(inp.shape))):
-#     # Looping through columns and rows inside singe channel.
-#     # Frist we move downward icreasing rows.
-#     # Then we move to the next column.
-#       for column_inx, column in enumerate(channel.T):
-#         for row_inx, row in enumerate(channel):
-#         # Calculating mask for our padded data it moves alongside rows then change columns.
-#           mask = channel[row_inx : param.shape[0] + row_inx, column_inx : param.shape[1] + column_inx]
-#         # Because sizes are not precalculated we check if the shape of param is diffrent of that of the mask.
-#         # If true there is no more space for mask to move inside current column so we go to another using break.
-#           if mask.shape[0] != param.shape[0] or mask.shape[1] != param.shape[1]:
-#               break
-#         # Current mask (so part of input data) is multiplied by kernel/param then summed to get single output. 
-#           out_array = mask * param
-#           out_list_computed = np.sum(out_array)
-        
-#         # Assiging single output to a index in singe channel.
-#           out_array_computed[row_inx, column_inx] = np.sum(out_array)
-#         # Assigin whole kernel before summing to an index by order column then rows.
-#           kernels[channel_idx, row_inx, column_inx ] = out_array
-#     # Adding fully proccesed channel to list and moving to the next.
-#       channels_combined.append(out_array_computed) 
-#     # Combining all saved channels.
-#     channels_combined = np.stack(channels_combined)
+
     
     
-    return output, input_pad, kernels
+    
 
 
 def conv_ld_sum(inp: ndarray, param: ndarray) -> ndarray:
@@ -405,9 +329,46 @@ def get_kernels(param: ndarray, input_pad: ndarray) -> ndarray:
 
 
 def map_input_weight_matrix(inp: ndarray, param: ndarray, input_pad: ndarray, kernels: ndarray, weights: ndarray, map_key: str) -> ndarray:
+    if input_pad.ndim != 4:
+       raise ValueError(f"Expected `input_pad` to be 4D (batch, channels, height, width), but got shape {input_pad.shape} with {input_pad.ndim} dimensions.")
     #  For map_key == weights it will return weights derivative
     #  For map_key == input it will return maped indexes only
+    # print(param.shape)
+    # print(input_pad.shape)
+    # # quit()
+    # param_der = np.zeros(param.shape)
+    # print(param_der.shape)
+    # # quit()
+
+    # # OLD SLOW VERSION
+    # for idx, val in np.ndenumerate(param):
+    # #    print(idx)
+    #    row = idx[0]
+    #    col= idx[1]
     
+
+    # #  rts = rows_to_skip
+    # #  calculating with which rows, weight did not interact.
+    #    rts_up = np.abs(0-row)
+    #    rts_down = np.abs((param.shape[0] - 1)-row)
+       
+    # #  cts = columns_to_skip
+    # #  calculating with which columns, weight did not interact.
+    #    cts_up = np.abs(0-col)
+    #    cts_down = np.abs((param.shape[1] - 1)-col)
+
+    #    der = 0
+    #    for sample in input_pad:  # shape (C, H, W)
+    #       for channel in sample: # shape (H, W)
+    #          der += np.sum(channel[rts_up: channel.shape[0] - rts_down, cts_up: channel.shape[1] - cts_down] * val)
+             
+    #    param_der[idx] = der
+
+    # print(param_der)
+       
+    
+    
+    quit()
     # turning kernels back to 2d
     # kernels = kernels.reshape(((kernels.shape[0] * kernels.shape[1], kernels.shape[2] * kernels.shape[3])))
     
@@ -532,7 +493,8 @@ def input_derivative(inp: ndarray, input_pad: ndarray, weight_index: map_input_w
                columns_skipped += 1
               
                continue                               
-  
+            # print(channel_weight_index)
+            # quit()
             weights_indexes = channel_weight_index[inx_row,  inx_column]
             inputs_weights = [weights[*i] for i in weights_indexes]
             
@@ -620,63 +582,7 @@ def np_index(arr, value):
         raise ValueError(f"{value} is not in array")
 
 
-# input_1d = np.array([[1,2,3,4,5],
-#                      [5,2,3,4,5],
-#                      [5,2,3,4,5],
-#                      [5,2,3,4,5]])
 
-input_1d = np.array([[[[1,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5]],
-
-                     [[1,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5]],
-
-                     [[1,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5]]],
-                     
-                     [[[1,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5]],
-
-                     [[1,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5]],
-
-                     [[1,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5]]],
-
-                     [[[1,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5]],
-
-                     [[1,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5]],
-
-                     [[1,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5],
-                     [5,2,3,4,5]]]])
-# input_1d = np.array([1,2,3,4,5])
-# param_1d = np.array([[1,1,1],
-#                      [1,1,1],
-#                      [1,1,1]])
-param_1d = np.array([[1,1,1],
-                     [1,1,1],
-                     [1,1,1]
-                     ])
 
 
    
@@ -734,7 +640,8 @@ def sum_param_gradients(sample_derivative_list: list) -> ndarray:
 
    
 if __name__ == "__main__":
-  input_1d = np.array([[[[1,2,3,4,5],
+    input_1d = np.array([[[[1,2,3,4,5],
+                                
                      [5,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5]],
@@ -778,20 +685,24 @@ if __name__ == "__main__":
                      [5,2,3,4,5],
                      [5,2,3,4,5],
                      [5,2,3,4,5]]]])
-  
-  layer = Conv_layer()
-  layer.set_layer(param = param_1d)
-  flatten = layer.forward_L(input_1d, training = True)
-  # print(weight_grad)
-  # print(input_grad)
+    param_1d = np.array([[2,2,1],
+                     [1,1,1],
+                     [1,2,1]
+                     ])
+    layer = Conv_layer()
+    layer.set_layer(param = param_1d)
+    flatten = layer.forward_L(input_1d, training = True)
+    layer.backward_L(flatten)
+    # print(weight_grad)
+    # print(input_grad)
 
-  # print('END')
-  print(flatten)
+    # print('END')
+    print(flatten)
 #   print(output_final.shape)
-  #   print('END')
-  # print(sum_list)
-#   print(input_grads)
-  # print(param_grads)
+   #print('END')
+   #print(sum_list)
+   #print(input_grads)
+   #print(param_grads)
 
 
 
