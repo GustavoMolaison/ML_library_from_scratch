@@ -120,7 +120,7 @@ print(y_train.shape)
 hugo = Hugo(loss = 'cross_entropy', update_method = 'SGD', clip_method = 'norm clipping', weight_initialization= 'he', dropout = False, lr = 0.01)
 
 layer_conv = Conv_layer(model = hugo.model)
-layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none', filters = 10)
+layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none', filters = 1)
 hugo.model.add_layer(layer = layer_conv, dense = 1)
 
 layer_I = Dense_Layer(model = hugo.model)

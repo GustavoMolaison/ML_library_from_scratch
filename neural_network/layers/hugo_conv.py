@@ -203,6 +203,8 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     param_len_1 = param.shape[1]
 
     channels_combined_list = []
+    # print(inp[0].shape)
+    # quit()
     for inx, channel in enumerate(inp[0]):
 
         channel_pad_list = []
@@ -259,15 +261,20 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 def conv_ld(inp: ndarray, param: ndarray, bias: float, filters_amount: int = 1,  jump: int = 0) -> ndarray:
 #  SEQUENTIAL
    param_flat = param.flatten()
+   print('inp', inp)
+   quit()
    output = inp
 
    for filters_num in range(filters_amount):
+    # print(f'output: {output.shape}')
     input_pad = input_pad_calc(output, param)
     patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (2, 3))
     patches = np.reshape(patches, (patches.size // param.size, param.size))
     output = np.dot(patches, param_flat)
     output = output + bias
-   
+
+   print('output', output.shape)
+   quit()
   
    return output, input_pad, patches
 
@@ -495,7 +502,7 @@ def input_derivative(inp: ndarray, input_pad: ndarray, weight_index: map_input_w
         
                   
             #  here gradient of kernel is one because we are only adding them and its fairly simple
-            gradient = np.sum(inputs_weights)
+            # gradient = np.sum(inputs_weights)
             input_gradients[inx_row - len(rows_to_skip) //2, inx_column - len(columns_to_skip) //2] = gradient
             
 
