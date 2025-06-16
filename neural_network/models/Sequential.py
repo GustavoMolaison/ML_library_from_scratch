@@ -51,7 +51,7 @@ class hugo_2_0():
             
 
     def backward(self, x, y, training = True):
-        print(self.loss)
+       
         mse_loss, mse_grad = self.loss_methods[self.loss](x, y)
         if training == False:
             return mse_loss
@@ -134,8 +134,8 @@ def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_upd
 #                  activation_functions = ['leaky relu','leaky relu','sigmoid'], lr_update_method = ['Hugo_lr_bonus','Hugo_lr_bonus','Hugo_lr_bonus']
 #                  weight_innitialization= [None, None, 'xavier'] )
 class Hugo():
-    def __init__(self, loss, weight_initialization, dropout, lr, clip_method = 'norm clipping', update_method = 'gradient descent'):
-        self.model = hugo_2_0(loss = loss, update_method= update_method, weight_initialization = weight_initialization, dropout = dropout, lr = lr)
+    def __init__(self, loss, weight_initialization, dropout, lr, clip_method = 'norm clipping', update_method = 'gradient descent', max_grad = 1):
+        self.model = hugo_2_0(loss = loss, update_method= update_method, weight_initialization = weight_initialization, dropout = dropout, lr = lr, max_grad = max_grad)
 
     # def set_layers(self, model_nn, X, Y, neurons_num, density, activation_functions: list, lr_update_method: list, weight_initialization: list):
     #     self.set_up_layers = set_up_layers(X_training, Y_training, model_nn = model_nn,

@@ -17,7 +17,7 @@ class Conv_layer():
            
            
 
-        def set_layer(self, param, activation_function = 'none', weight_initialization = None, update_method = 'gradient descent', jump: int = 0, filters: int = 1):
+        def set_layer(self, param, activation_function = 'none', weight_initialization = None, update_method = 'gradient descent', jump: int = 0, filters: int = 1, input_layer = False):
             if isinstance(param, np.ndarray):
               self.param = param
             else:
@@ -38,6 +38,7 @@ class Conv_layer():
             self.layer_set = True
             self.velocity_w = 0
             self.velocity_b = 0
+            self.input_l = input_layer
                  
            
         def forward_L(self, input, training):
@@ -50,13 +51,13 @@ class Conv_layer():
               print('Conv_layer is not set. Use "Conv_layer.set_layer" before anything else!')
               raise LookupError()
     
-           output = np.zeros(input.shape)
+           self.inp_shape = input.shape
            self.input_grads = np.zeros(input.shape)
            self.weight_grads = []
           
            import time    
            output_sample, input_pad, self.patches = conv_ld(inp = input, param =self.param, bias = self.bias, jump = self.jump, filters_amount= self.filters)
-           self.flatten = np.reshape(output, (output.shape[0], -1))
+           self.flatten = np.reshape(output_sample, (output_sample.shape[0], -1))
            self.flatten, self.af_gradient = self.layer_af_calc(self.flatten) 
 
 
@@ -73,14 +74,17 @@ class Conv_layer():
            
            
            grad = grad * self.af_gradient
-           print(grad.shape)
-           print(self.patches.shape)
+        #    print(grad.shape)
+        #    print(self.patches.shape)
           #  quit()
-
+          
            grad_flat = grad.flatten()
-           print(grad_flat.shape)
+        #    print(grad_flat.shape)
            
            layer_weight_grad = np.dot(grad_flat, self.patches).reshape(self.param.shape)
+           if not self.input_l:
+             param_flipped = np.flip(self.param)
+             layer_input_grad, no_matter, no_matter_2 = conv_ld(inp = np.reshape(grad, self.inp_shape), param = param_flipped, bias = 0)
 
            layer_bias_grad = np.sum(grad) 
            
@@ -97,8 +101,8 @@ class Conv_layer():
         #    end = time.perf_counter()
         #    print(f"Execution time backward: {end - start:.4f} seconds")
         #    quit()
-
-           return 0
+           
+           return layer_input_grad
 
            
         
@@ -261,29 +265,26 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 def conv_ld(inp: ndarray, param: ndarray, bias: float, filters_amount: int = 1,  jump: int = 0) -> ndarray:
 #  SEQUENTIAL
    param_flat = param.flatten()
-   print('inp', inp)
-   quit()
-   output = inp
+#    print('inp', inp.shape)
+#    quit()
+   
+   
 
    for filters_num in range(filters_amount):
     # print(f'output: {output.shape}')
-    input_pad = input_pad_calc(output, param)
+    input_pad = input_pad_calc(inp, param)
     patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (2, 3))
     patches = np.reshape(patches, (patches.size // param.size, param.size))
     output = np.dot(patches, param_flat)
     output = output + bias
+    output = np.reshape(output, inp.shape)
+    inp = output
 
-   print('output', output.shape)
-   quit()
+#    print('output', output.shape)
+#    print('inp', inp.shape)
+#    quit()
   
    return output, input_pad, patches
-
-
-
-
-
-                                          # OLD ORIGINAL SLOW IMPLEMENTATION
-    # initilization of entry data
 
     
     
