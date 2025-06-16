@@ -489,7 +489,7 @@ def input_derivative(inp: ndarray, input_pad: ndarray, weight_index: map_input_w
             # print(channel_weight_index)
             # quit()
             weights_indexes = channel_weight_index[inx_row,  inx_column]
-            inputs_weights = [weights[*i] for i in weights_indexes]
+            # inputs_weights = [weights[*i] for i in weights_indexes]
             
             
         
@@ -550,7 +550,7 @@ def weight_derivative(inp: ndarray, input_pad: ndarray, input_index: map_input_w
             
             
         #     # filling our np.zeros template
-            weight_gradients[*index] = gradient
+            # weight_gradients[*index] = gradient
 
     
     return weight_gradients

@@ -3,7 +3,7 @@ from models.Sequential import Hugo
 from layers.hugo_conv import Conv_layer
 import numpy as np
 from utils.hugo_utility import Utility as U
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 X = np.array(
     [  # Sample 0 - like "1"
@@ -120,7 +120,7 @@ print(y_train.shape)
 hugo = Hugo(loss = 'cross_entropy', update_method = 'SGD', clip_method = 'norm clipping', weight_initialization= 'he', dropout = False, lr = 0.01)
 
 layer_conv = Conv_layer(model = hugo.model)
-layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none')
+layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none', filters = 10)
 hugo.model.add_layer(layer = layer_conv, dense = 1)
 
 layer_I = Dense_Layer(model = hugo.model)
