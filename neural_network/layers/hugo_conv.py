@@ -19,9 +19,9 @@ class Conv_layer():
 
         def set_layer(self, param, activation_function = 'none', weight_initialization = None, update_method = 'gradient descent', jump: int = 0, filters: int = 1, input_layer = False):
             if isinstance(param, np.ndarray):
-              self.param = param
+                self.params = [param for _ in range(filters)]
             else:
-              self.param = np.random.uniform(-1, 1, param)
+              self.params = [np.random.uniform(-1, 1, param) for _ in range(filters)]
 
             # if update_method == 'gradient descent' and self.model.update_method !='gradient descent':
             #     self.update_method = self.model.update_method
@@ -56,7 +56,7 @@ class Conv_layer():
            self.weight_grads = []
           
            import time    
-           output_sample, input_pad, self.patches = conv_ld(inp = input, param =self.param, bias = self.bias, jump = self.jump, filters_amount= self.filters)
+           output_sample, input_pad, self.patches = conv_ld(inp = input, params =self.params, bias = self.bias, jump = self.jump, filters_amount= self.filters)
            self.flatten = np.reshape(output_sample, (output_sample.shape[0], -1))
            self.flatten, self.af_gradient = self.layer_af_calc(self.flatten) 
 
@@ -66,43 +66,44 @@ class Conv_layer():
            return self.flatten
 
         def backward_L(self, grad):
+        #  STACKING FILTERS MODE 
+           grad = grad * self.af_gradient     
            
-           start = time.perf_counter()
-           if self.layer_set != True:
-              print('Conv_layer is not set. Use "Conv_layer.set_layer" before anything else!')
-              raise LookupError()
-           
-           
-           grad = grad * self.af_gradient
-        #    print(grad.shape)
-        #    print(self.patches.shape)
-          #  quit()
-          
+
+        #  WEIGHT GRADIENT WILL BE DEPENDENT ON THE WEIGHT APPLIED BEFORE IT CAUSE WE STACK FILTERS(WEIGHTS)
            grad_flat = grad.flatten()
-        #    print(grad_flat.shape)
-           
-           layer_weight_grad = np.dot(grad_flat, self.patches).reshape(self.param.shape)
-           if not self.input_l:
-             param_flipped = np.flip(self.param)
-             layer_input_grad, no_matter, no_matter_2 = conv_ld(inp = np.reshape(grad, self.inp_shape), param = param_flipped, bias = 0)
-
-           layer_bias_grad = np.sum(grad) 
-           
-          
-        #    layer_bias_grad = np.sum(grad * self.bias_grad)
-       
-        #    self.velocity_w = self.update_methods[self.update_method](self.model.lr,  layer_weight_grad,  self.velocity_w)
-        #    self.velocity_b = self.update_methods[self.update_method](self.model.lr,  layer_bias_grad,    self.velocity_b)
-
-           self.param -= layer_weight_grad * self.model.lr
-           self.bias -= layer_bias_grad * self.model.lr
-        #    layer_input_grad = np.dot(grad, self.input_grads.T)
-
-        #    end = time.perf_counter()
-        #    print(f"Execution time backward: {end - start:.4f} seconds")
+           layer_weight_grad = grad_flat
+           layer_weight_grad_stack = []
+        #    print(self.patches[0].shape)
+        #    print(layer_weight_grad.shape)
         #    quit()
            
-           return layer_input_grad
+           for patch, param in zip(reversed(self.patches), reversed(self.params)):
+            #  print('START ITERATION')
+            #  print(f'weight grad: {layer_weight_grad.shape}')
+            #  print(f'patch: {patch.shape}')
+
+             layer_weight_grad = np.dot(grad.flatten(), patch).reshape(self.params[0].shape)
+             layer_weight_grad_stack.append(layer_weight_grad)
+             
+             param_flipped = np.flip(param)
+             grad, no_matter, no_matter_2 = conv_ld(inp = np.reshape(grad, self.inp_shape), params = param_flipped, bias = 0, single_param = True)
+
+
+            #  print('END ITERATION')
+            #  print(f'weight grad: {layer_weight_grad.shape}')
+            #  print(f'patch: {patch.shape}')
+
+           layer_bias_grad = np.sum(grad) 
+            
+        #    self.velocity_w = self.update_methods[self.update_method](self.model.lr,  layer_weight_grad,  self.velocity_w)
+        #    self.velocity_b = self.update_methods[self.update_method](self.model.lr,  layer_bias_grad,    self.velocity_b)
+           for param, layer_weight_grad in zip(self.params, reversed(layer_weight_grad_stack)):
+             param -= layer_weight_grad * self.model.lr
+
+           self.bias -= layer_bias_grad * self.model.lr
+           
+           return grad
 
            
         
@@ -114,7 +115,40 @@ class Conv_layer():
 
 
 
+def conv_ld(inp: ndarray, params: ndarray, bias: float, filters_amount: int = 1,  jump: int = 0, single_param = False) -> ndarray:
+#  SEQUENTIAL
+  
+#    print('inp', inp.shape)
+#    quit()
+   if single_param == True:
+      input_pad = input_pad_calc(inp, params)
+      patches = sliding_window_view(input_pad, (params.shape[0], params.shape[1]), axis = (2, 3))
+      patches = np.reshape(patches, (patches.size // params.size, params.size))
+      output = np.dot(patches, params.flatten())
+      output = output + bias
+      output = np.reshape(output, inp.shape)
     
+      return output, input_pad, patches   
+   
+   
+   patches_stack = []
+   for param in params:
+    # print(f'output: {output.shape}')
+    input_pad = input_pad_calc(inp, param)
+    patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (2, 3))
+    patches = np.reshape(patches, (patches.size // param.size, param.size))
+    patches_stack.append(patches)
+    output = np.dot(patches, param.flatten())
+    output = output + bias
+    # output = output / np.max(np.abs(output))
+    output = np.reshape(output, inp.shape)
+    inp = output
+
+#    print('output', output.shape)
+#    print('inp', inp.shape)
+#    quit()
+  
+   return output, input_pad, patches_stack   
 
 
 
@@ -262,29 +296,7 @@ def kernel_forward(inp: ndarray, param: ndarray, input_pad: ndarray, jump: int =
 # PURPOUSE#######
 # CHECK? -> WORKING V
 # Calculating singe outputs from padded input using masks also saving all used masks/kernels
-def conv_ld(inp: ndarray, param: ndarray, bias: float, filters_amount: int = 1,  jump: int = 0) -> ndarray:
-#  SEQUENTIAL
-   param_flat = param.flatten()
-#    print('inp', inp.shape)
-#    quit()
-   
-   
 
-   for filters_num in range(filters_amount):
-    # print(f'output: {output.shape}')
-    input_pad = input_pad_calc(inp, param)
-    patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis = (2, 3))
-    patches = np.reshape(patches, (patches.size // param.size, param.size))
-    output = np.dot(patches, param_flat)
-    output = output + bias
-    output = np.reshape(output, inp.shape)
-    inp = output
-
-#    print('output', output.shape)
-#    print('inp', inp.shape)
-#    quit()
-  
-   return output, input_pad, patches
 
     
     

@@ -103,11 +103,11 @@ print(X.shape)
 print(y.shape)
 # quit()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-X_train = X_train[: 500]
-y_train_b = y_train[: 500]
+X_train = X_train[: 2000]
+y_train_b = y_train[: 2000]
 y_train = U.one_hot_encoding(y_train_b, 10)
-X_test = X_test[: 500]
-y_test_b = y_test[: 500]
+X_test = X_test[: 2000]
+y_test_b = y_test[: 2000]
 y_test = U.one_hot_encoding(y_test_b, 10)
 # print(X_train[0])
 # print(y_test)
@@ -120,15 +120,27 @@ print(y_train.shape)
 hugo = Hugo(loss = 'cross_entropy', update_method = 'SGD', clip_method = 'norm clipping', weight_initialization= 'he', dropout = False, lr = 0.01, max_grad = 1)
 
 layer_conv = Conv_layer(model = hugo.model)
-layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none', filters = 1)
+layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none', filters = 3)
 hugo.model.add_layer(layer = layer_conv, dense = 1)
 
 layer_I = Dense_Layer(model = hugo.model)
-layer_I.set_layer(neurons_num=64, activation_function = 'relu', weight_initialization= 'he')
+layer_I.set_layer(neurons_num=64, activation_function = 'tanh', weight_initialization= 'he')
 hugo.model.add_layer(layer = layer_I, dense = 1)
 
 layer_D = Dense_Layer(model = hugo.model)
-layer_D.set_layer(neurons_num=64, activation_function = 'relu', weight_initialization= 'he')
+layer_D.set_layer(neurons_num=64, activation_function = 'tanh', weight_initialization= 'he')
+hugo.model.add_layer(layer = layer_D, dense = 1)
+
+layer_D = Dense_Layer(model = hugo.model)
+layer_D.set_layer(neurons_num=64, activation_function = 'tanh', weight_initialization= 'he')
+hugo.model.add_layer(layer = layer_D, dense = 1)
+
+layer_D = Dense_Layer(model = hugo.model)
+layer_D.set_layer(neurons_num=64, activation_function = 'tanh', weight_initialization= 'he')
+hugo.model.add_layer(layer = layer_D, dense = 1)
+
+layer_D = Dense_Layer(model = hugo.model)
+layer_D.set_layer(neurons_num=64, activation_function = 'tanh', weight_initialization= 'he')
 hugo.model.add_layer(layer = layer_D, dense = 1)
 
 layer_O = Dense_Layer(model = hugo.model)
