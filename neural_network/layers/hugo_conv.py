@@ -55,7 +55,7 @@ class Conv_layer():
            self.input_grads = np.zeros(input.shape)
            self.weight_grads = []
           
-           import time    
+               
            output_sample, input_pad, self.patches = conv_ld(inp = input, params =self.params, bias = self.bias, jump = self.jump, filters_amount= self.filters)
            self.flatten = np.reshape(output_sample, (output_sample.shape[0], -1))
            self.flatten, self.af_gradient = self.layer_af_calc(self.flatten) 
