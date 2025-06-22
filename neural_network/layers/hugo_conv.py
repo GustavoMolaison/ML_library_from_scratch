@@ -19,7 +19,7 @@ class Conv_layer():
            
 
         def set_layer(self, param, activation_function = 'none', weight_initialization = None, update_method = 'gradient descent', jump: int = 0, filters: int = 1, 
-                      input_layer = False, sequential = True, bias = 0):
+                      input_layer = False, sequential = True, flat_output = True, bias = 0):
             
             if isinstance(param, np.ndarray):
                 self.params = [param for _ in range(filters)]
@@ -42,17 +42,16 @@ class Conv_layer():
             self.velocity_b = 0
             self.input_l = input_layer
             self.sequential = sequential
+            self.flat_output = flat_output
                  
            
         def forward_L(self, input, training):
            
            if input.ndim != 4:
-              print(f'Input to conv_layer must be shape (Samples, channels, widht, height).\n Not {input.shape} ')
-              raise LookupError()
+              raise ValueError(f'Input to conv_layer must be shape (Samples, channels, widht, height).\n Not {input.shape} ')
 
            if self.layer_set != True:
-              print('Conv_layer is not set. Use "Conv_layer.set_layer" before anything else!')
-              raise LookupError()
+              raise ValueError('Conv_layer is not set. Use "Conv_layer.set_layer" before anything else!')
     
            self.inp_shape = input.shape
            if not hasattr(self, 'biases'):
@@ -65,17 +64,25 @@ class Conv_layer():
            
         
 
-           self.flatten = np.reshape(output_sample, (output_sample.shape[0], -1))
-           self.flatten, self.af_gradient = self.layer_af_calc(self.flatten) 
+           output_flatten = np.reshape(output_sample, (output_sample.shape[0], -1))
+           output_flatten, self.af_gradient = self.layer_af_calc(output_flatten) 
+
+           if self.flat_output == True:
+              return output_flatten
+           else:
+              return np.reshape(output_flatten, output_sample.shape)
            
           
-           return self.flatten
+      
 
 
         def backward_L(self, grad):
         
         # Apply the derivative of the activation function (element-wise)
+         print(grad.shape)
          grad = grad * self.af_gradient
+         print(grad.shape)
+        #  quit()
 
          if self.sequential == True:
            # Sequential mode: each filter is applied one after another (not in parallel)
@@ -106,7 +113,7 @@ class Conv_layer():
              
              # change patches into shape: (num_filters, num_patches, patch_size)
              patches = self.patches.transpose(0, 2, 1)  # (filters, samples, patch_size)
-             params = np.stack(self.params)  # (filters, channels, kernel_h, kernel_w)
+            #  params = np.stack(self.params)  # (filters, channels, kernel_h, kernel_w)
 
              # Reshape gradient to match filter-wise structure
              grad_upd = np.reshape(grad, (grad.shape[0], self.inp_shape[2], self.inp_shape[3], self.filters))
@@ -129,28 +136,31 @@ class Conv_layer():
                  grad_to_sum, _ = conv_ld(
                         inp=grad_conv,
                         params=param_flipped,
-                        bias=0,
+                        bias=np.zeros(self.biases.shape),
                         filters_amount= grad_conv.shape[1],
                         single_param=False,
                         sequential=False
                          )
                     
                 # Sum gradients from each filter to get final input gradient
-                 grad = np.sum(grad_to_sum, axis=1)
+                 input_grad = np.sum(grad_to_sum, axis=1)
              end_time = time.time()
              print(f"Execution time backprop parallel: {end_time - start_time:.6f} seconds")
 
  
     # Compute gradient for bias term 
-         
+        #  print(f'layer_bias_grad: {grad.shape}')
          layer_bias_grad = np.sum(grad, axis = 0)
+        #  print(f'layer_bias_grad: {layer_bias_grad.shape}')
+        #  print(f'(self.filters, self.inp_shape[2] * self.inp_shape[3]): {(self.filters, self.inp_shape[2] * self.inp_shape[3])}')
+        #  quit()
          self.velocity_b = self.update_methods[self.update_method](self.model.lr, layer_bias_grad, self.velocity_b)
          layer_bias_grad = np.reshape(layer_bias_grad, (self.filters, self.inp_shape[2] * self.inp_shape[3]))
          for idx, b_grad in enumerate(layer_bias_grad):
             self.biases[idx] -= np.sum(b_grad) * self.model.lr
         
 
-         return grad  # This is the gradient w.r.t. input for the previous layer
+         return input_grad  # This is the gradient w.r.t. input for the previous layer
 
            
         
