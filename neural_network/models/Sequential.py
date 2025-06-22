@@ -35,7 +35,7 @@ class hugo_2_0():
 
     def add_layer(self, layer, dense = 1):
       
-        
+            
             for density in range(dense):
                self.layers.append(layer)
     
@@ -71,9 +71,9 @@ class hugo_2_0():
            import time
            for layer in self.layers:
             #   print('Layer Done!')
-              start = time.perf_counter()
+              # start = time.perf_counter()
               output = layer.forward_L(output, training)
-              end = time.perf_counter()
+              # end = time.perf_counter()
             #   print(f"Execution time {layer}: {end - start:.4f} seconds")
            
            
