@@ -117,14 +117,14 @@ print(y_train.shape)
 # quit()
 
 #  Here is my model syntax we can add multiple layers to one model or run layers forward and backwards individually 
-hugo = Hugo(loss = 'cross_entropy', update_method = 'SGD', clip_method = 'norm clipping', weight_initialization= 'he', dropout = False, lr = 0.001, max_grad = 1)
+hugo = Hugo(loss = 'cross_entropy', update_method = 'SGD', clip_method = 'norm clipping', weight_initialization= 'he', dropout = False, lr = 0.01, max_grad = 1)
 
 layer_conv = Conv_layer(model = hugo.model)
-layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'leaky relu', filters = 3, sequential = True, input_layer= True, flat_output = False)
+layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none', filters = 10, sequential = False, input_layer= True, flat_output = False)
 hugo.model.add_layer(layer = layer_conv, dense = 1)
 
 layer_conv = Conv_layer(model = hugo.model)
-layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'leaky relu', filters = 3, sequential = True, input_layer= False)
+layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none', filters = 10, sequential = False, input_layer= False)
 hugo.model.add_layer(layer = layer_conv, dense = 1)
 
 layer_I = Dense_Layer(model = hugo.model)
