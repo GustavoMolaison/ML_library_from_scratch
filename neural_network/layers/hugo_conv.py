@@ -19,7 +19,7 @@ class Conv_layer():
            
 
         def set_layer(self, param, activation_function = 'none', weight_initialization = None, update_method = 'gradient descent', jump: int = 0, filters: int = 1, 
-                      input_layer = False, sequential = True):
+                      input_layer = False, sequential = True, bias = 0):
             
             if isinstance(param, np.ndarray):
                 self.params = [param for _ in range(filters)]
@@ -31,8 +31,7 @@ class Conv_layer():
             else:
                 self.update_method = update_method
 
-            self.bias = 0
-            self.update_method = update_method
+            self.bias = bias
             self.jump = jump
             self.activation_function = activation_function
             self.layer_af_calc = self.activation_functions[activation_function]
@@ -56,11 +55,12 @@ class Conv_layer():
               raise LookupError()
     
            self.inp_shape = input.shape
-           self.input_grads = np.zeros(input.shape)
-           self.weight_grads = []
+           if not hasattr(self, 'biases'):
+             self.biases = np.zeros(self.filters)
+           
           
                
-           output_sample, input_pad, self.patches = conv_ld(inp = input, params =self.params, bias = self.bias, jump = self.jump, 
+           output_sample, self.patches = conv_ld(inp = input, params =self.params, bias = self.biases, jump = self.jump, 
                                                             filters_amount= self.filters, sequential= self.sequential)
            
         
@@ -68,54 +68,89 @@ class Conv_layer():
            self.flatten = np.reshape(output_sample, (output_sample.shape[0], -1))
            self.flatten, self.af_gradient = self.layer_af_calc(self.flatten) 
            
-           print(self.flatten.shape)
-        #    quit()
+          
            return self.flatten
 
 
         def backward_L(self, grad):
         
-           grad = grad * self.af_gradient     
+        # Apply the derivative of the activation function (element-wise)
+         grad = grad * self.af_gradient
 
-           if self.sequential == True:
+         if self.sequential == True:
+           # Sequential mode: each filter is applied one after another (not in parallel)
              for patch, param in zip(reversed(self.patches), reversed(self.params)):
 
-               layer_weight_grad = np.dot(grad.flatten(), patch).reshape(self.params[0].shape)
-               self.velocity_w = self.update_methods[self.update_method](self.model.lr,  layer_weight_grad,  self.velocity_w)
-               param -= layer_weight_grad * self.model.lr
+              # Compute weight gradient: dot product between gradient and stored patch
+              layer_weight_grad = np.dot(grad.flatten(), patch).reshape(self.params[0].shape)
 
-               param_flipped = np.flip(param)
-               grad, no_matter, no_matter_2 = conv_ld(inp = np.reshape(grad, self.inp_shape), params = param_flipped, bias = 0, single_param = True)
+              # Update velocity and weights using selected update method (e.g., momentum, Adam)
+              self.velocity_w = self.update_methods[self.update_method](self.model.lr, layer_weight_grad, self.velocity_w)
+              param -= layer_weight_grad * self.model.lr  # Update weights
+              
+              if not self.input_l:
+              # Compute input gradient by convolving flipped filter with grad
+                param_flipped = np.flip(param)
+                grad, _ = conv_ld(
+                  inp=np.reshape(grad, self.inp_shape),
+                  params=param_flipped,
+                  bias=0,
+                  single_param=True,
+                  sequential=True
+               )
 
-           else:
-               
-               
+         else:
+             import time 
+             # Parallel mode: multiple filters applied at the same time
+             start_time = time.time()
+             
+             # change patches into shape: (num_filters, num_patches, patch_size)
+             patches = self.patches.transpose(0, 2, 1)  # (filters, samples, patch_size)
+             params = np.stack(self.params)  # (filters, channels, kernel_h, kernel_w)
+
+             # Reshape gradient to match filter-wise structure
+             grad_upd = np.reshape(grad, (grad.shape[0], self.inp_shape[2], self.inp_shape[3], self.filters))
+             grad_upd = grad_upd.transpose(3, 0, 1, 2)  # (filters, batch, height, width)
+             grad_upd = grad_upd.reshape(self.filters, -1)  # (filters, num_output_positions)
+
+             # Compute weight gradients via einsum for all filters at once
+             # 'ijk,ik->ij': sum over the output positions to get (filters, patch_size)
+             layer_weight_grad = np.einsum('ijk,ik->ij', patches, grad_upd).reshape(self.filters, *self.params[0].shape)
+
+            # Update each filter's weights
+             for i, param in enumerate(self.params):
+                param -= layer_weight_grad[i] * self.model.lr
+
+             # Compute gradient w.r.t. input (only if this is not the first layer)
+             if not self.input_l:
+                 
+                 param_flipped = [np.flip(param) for param in self.params]
+                 grad_conv = np.reshape(grad, (self.inp_shape[0], -1, self.inp_shape[2], self.inp_shape[3]))
+                 grad_to_sum, _ = conv_ld(
+                        inp=grad_conv,
+                        params=param_flipped,
+                        bias=0,
+                        filters_amount= grad_conv.shape[1],
+                        single_param=False,
+                        sequential=False
+                         )
+                    
+                # Sum gradients from each filter to get final input gradient
+                 grad = np.sum(grad_to_sum, axis=1)
+             end_time = time.time()
+             print(f"Execution time backprop parallel: {end_time - start_time:.6f} seconds")
+
+ 
+    # Compute gradient for bias term 
+         
+         layer_bias_grad = np.sum(grad, axis = 0)
+         self.velocity_b = self.update_methods[self.update_method](self.model.lr, layer_bias_grad, self.velocity_b)
+         layer_bias_grad = np.reshape(layer_bias_grad, (self.filters, self.inp_shape[2] * self.inp_shape[3]))
+         for idx, b_grad in enumerate(layer_bias_grad):
+            self.biases[idx] -= np.sum(b_grad) * self.model.lr
         
-               patches = np.stack(self.patches).transpose(0, 2, 1)   
-               params = np.stack(self.params)
-               grad_upd = np.reshape(grad, (grad.shape[0], self.inp_shape[2], self.inp_shape[3], self.filters))
-               grad_upd = grad_upd.transpose(3, 0, 1, 2)
-               grad_upd = grad_upd.reshape(self.filters, -1)  
-               
-               
-               
-               layer_weight_grad = np.einsum('ijk,ik->ij', patches, grad_upd).reshape(self.filters, *self.params[0].shape)
-               for i, param in enumerate(self.params):
-                  param -= layer_weight_grad[i] * self.model.lr
 
-               if not self.input_l:
-                  grad_summed = []
-                  for param in self.params:
-                    param_flipped = np.flip(param)
-                    grad_to_sum, no_matter, no_matter_2 = conv_ld(inp = np.reshape(grad, self.inp_shape), params = param_flipped, bias = 0, single_param = True)
-                    grad_summed.append(grad_to_sum)
-                  grad = np.sum(grad_summed,axis=0)
-
-           layer_bias_grad = np.sum(grad) 
-           self.velocity_b = self.update_methods[self.update_method](self.model.lr,  layer_bias_grad,    self.velocity_b)
-           self.bias -= layer_bias_grad * self.model.lr
-           
-           return grad
+         return grad  # This is the gradient w.r.t. input for the previous layer
 
            
         
@@ -127,8 +162,8 @@ class Conv_layer():
 
 
 
-def conv_ld(inp: ndarray, params: ndarray, bias: float, filters_amount: int = 1, 
-            jump: int = 0, single_param = False, sequential = True) -> ndarray:
+def conv_ld(inp: ndarray, params: ndarray, bias: ndarray, filters_amount: int = 1, 
+            jump: int = 0, single_param = False, sequential = False, backprop = False) -> ndarray:
     """
     Custom convolution-like function.
 
@@ -146,17 +181,17 @@ def conv_ld(inp: ndarray, params: ndarray, bias: float, filters_amount: int = 1,
         input_pad: Padded input used for the last convolution.
         patches_stack: List of flattened patch matrices from sliding windows.
     """
-
+    
     # ---------------------------------------------
     # CASE 1: SINGLE FILTER USED ACROSS INPUT
     # ---------------------------------------------
     if single_param == True:
         # Pad the input based on filter size
         input_pad = input_pad_calc(inp, params)
-
+        
         # Create sliding windows: shape becomes (samples, channels, new_h, new_w, f_h, f_w)
         patches = sliding_window_view(input_pad, (params.shape[0], params.shape[1]), axis=(1, 2))
-
+        
         # Flatten patches to shape: (num_patches, filter_size)
         patches = np.reshape(patches, (patches.size // params.size, params.size))
 
@@ -167,36 +202,36 @@ def conv_ld(inp: ndarray, params: ndarray, bias: float, filters_amount: int = 1,
         output = output + bias
 
         # Reshape output to match input's spatial dimensions
-        output = np.reshape(output, inp.shape)
-
-        return output, input_pad, patches
-
+        
+        output = np.reshape(output, (inp.shape[0], inp.shape[2], inp.shape[3]))
+        
+        return output, None
     # ---------------------------------------------
     # CASE 2: SEQUENTIAL MODE (like a stack of convs)
     # Each filter output becomes the input to the next
     # ---------------------------------------------
     if sequential == True:
-        patches_stack = []
 
+        # Initialize output tensor for all filters
+        # Shape: (filters, samples, height, width)
+        output = np.zeros((filters_amount, inp.shape[0], inp.shape[2], inp.shape[3]))
+
+        # Pad input per filter
+        input_pad = input_pad_calc(inp, params[0])
+
+         # Get patches from input. Patches shape: (samples, height, width, filter_h, filter_w)
+        patches = sliding_window_view(input_pad, params[0].shape, axis=(1, 2))
+
+        # Flatten patches to shape: (patches_amount, param.size)
+        patches = np.reshape(patches, (patches.size // params[0].size, params[0].size))
         # Iterate over filters
-        for param in params:
-            # Pad input to preserve dimensions
-            input_pad = input_pad_calc(inp, param)
 
-            # Extract sliding windows across input
-            patches = sliding_window_view(input_pad, (param.shape[0], param.shape[1]), axis=(1, 2))
-
-            # Flatten patches
-            patches = np.reshape(patches, (patches.size // param.size, param.size))
-
-            # Store patches
-            patches_stack.append(patches)
-
+        for idx, param in enumerate(params):
             # Apply filter
             output = np.dot(patches, param.flatten())
 
             # Add bias
-            output = output + bias
+            output = output + bias[idx]
 
             # Reshape output to match input (assuming same shape)
             output = np.reshape(output, inp.shape)
@@ -209,28 +244,27 @@ def conv_ld(inp: ndarray, params: ndarray, bias: float, filters_amount: int = 1,
     # Each filter is applied independently, result stacked
     # ---------------------------------------------
     else:
-        patches_stack = []
 
         # Initialize output tensor for all filters
         # Shape: (filters, samples, height, width)
         output = np.zeros((filters_amount, inp.shape[0], inp.shape[2], inp.shape[3]))
 
-        for idx, param in enumerate(params):
-            # Pad input per filter
-            input_pad = input_pad_calc(inp, param)
+        # Pad input per filter
+        input_pad = input_pad_calc(inp, params[0])
 
-            # Get patches from input. Patches shape: (samples, height, width, filter_h, filter_w)
-            patches = sliding_window_view(input_pad, param.shape, axis=(1, 2))
+         # Get patches from input. Patches shape: (samples, height, width, filter_h, filter_w)
+        patches = sliding_window_view(input_pad, params[0].shape, axis=(1, 2))
+
+        # Flatten patches to shape: (patches_amount, param.size)
+        patches = np.reshape(patches, (patches.size // params[0].size, params[0].size))
+
+        for idx, param in enumerate(params):
             
-            # Flatten patches to shape: (patches_amount, param.size)
-            patches = np.reshape(patches, (patches.size // param.size, param.size))
-            
-            # Store patches
-            patches_stack.append(patches)
 
             # Apply filter
             output_stack = np.dot(patches, param.flatten())
-            output_stack = output_stack + bias
+
+            output_stack = output_stack + bias[idx]
 
             # Normalize if needed (commented out)
             # output_stack = output_stack / np.max(np.abs(output_stack))
@@ -240,11 +274,12 @@ def conv_ld(inp: ndarray, params: ndarray, bias: float, filters_amount: int = 1,
 
             # Save into output array
             output[idx] = output_stack
+
         output = output.transpose(1,0,2,3)
     # Output shape for parallel mode:
     # (filters, samples, height, width)
-    
-    return output, input_pad, patches_stack
+    patches = np.repeat(patches[np.newaxis, :, :], repeats=filters_amount, axis=0)
+    return output, patches
 
 
 def _pad_ld(inp: ndarray, param_size: int) -> ndarray:
@@ -295,18 +330,11 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     
     channels_combined = np.stack(channels_combined_list)
-    # print(channels_combined.shape)
-    
-    # quit()
+
     samples = inp
     
     padded_batch = U.channels_pad_batch(samples = samples, example = channels_combined[0])
-    # print(inp.shape)
-    # print(padded_batch.shape)
     
-    padded_batch = np.reshape(padded_batch, (inp.shape[0], padded_batch.shape[1], padded_batch.shape[2]))
-    # print(padded_batch.shape)
-    # quit()
     return padded_batch
 
    
