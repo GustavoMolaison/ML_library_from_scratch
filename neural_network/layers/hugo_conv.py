@@ -305,7 +305,8 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
 
     samples = inp
     # Pad all samples with the padded example from first sample's first channel
-    padded_batch = U.channels_pad_batch(samples=samples, example=channels_combined[0])
+    
+    padded_batch = U.channels_pad_batch(samples=samples, example=channels_combined[0], axis = (0, 1))
 
     return padded_batch
 

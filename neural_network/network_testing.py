@@ -1,46 +1,11 @@
 from layers.hugo_dense import Dense_Layer
 from models.Sequential import Hugo
 from layers.hugo_conv import Conv_layer
+from layers.hugo_pooling import max_pool2d
 import numpy as np
 from utils.hugo_utility import Utility as U
 # import matplotlib.pyplot as plt
 
-X = np.array(
-    [  # Sample 0 - like "1"
-    [    [[0, 1, 0],
-         [0, 1, 0],
-         [0, 1, 0],
-         [0, 0, 0],
-         [0, 1, 0],
-         [0, 0, 0]]
-    ],
-    [  # Sample 1 - like "0"
-        [[1, 1, 1],
-         [1, 0, 1],
-         [1, 1, 1],
-         [0, 1, 0],
-         [1, 0, 1],
-         [0, 1, 0]]
-    ],
-    [  # Sample 2 - like "7"
-        [[1, 1, 1],
-         [0, 0, 1],
-         [0, 1, 0],
-         [0, 0, 1],
-         [0, 1, 0],
-         [1, 0, 0]]
-    ]
-], dtype=np.float32)
-
-# Corresponding labels (Y): integers for classification
-Y = np.array([1, 0, 7])
-X_train = X  
-Y =  Y.reshape(-1,1)
-y_train = Y
-# # print(X_training.shape)
-# print(Y_training.shape)
-# quit()
-import glob
 import os
 from PIL import Image
 import kagglehub
@@ -80,16 +45,9 @@ else:
         
         X = []
         for image_path in images_paths:
-          
-          img = Image.open(image_path)
-          # print(img)
-          # img = img.resize(IMAGE_SIZE) # Grayscale
-          # img_array = np.array(img, dtype=np.float32) 
+         
+          img = Image.open(image_path)     
           img_array = np.array(img, dtype=np.float32) / 255.0
-          # plt.imshow(img_array, cmap='gray')
-          # plt.show()
-          print(img_array)
-          # quit()
           X.append(img_array)
 
         X = X = np.array(X).reshape(-1, 1, 28, 28)
@@ -122,6 +80,9 @@ hugo = Hugo(loss = 'cross_entropy', update_method = 'SGD', clip_method = 'norm c
 layer_conv = Conv_layer(model = hugo.model)
 layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none', filters = 10, sequential = False, input_layer= True, flat_output = False)
 hugo.model.add_layer(layer = layer_conv, dense = 1)
+
+poolingmax2d = max_pool2d(model = hugo.model, pool_size= (3, 3))
+hugo.model.add_layer(layer = poolingmax2d, dense = 1)
 
 layer_conv = Conv_layer(model = hugo.model)
 layer_conv.set_layer(param = (3,3), weight_initialization = 'he', activation_function= 'none', filters = 10, sequential = False, input_layer= False)

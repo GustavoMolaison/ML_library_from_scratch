@@ -133,17 +133,15 @@ class Utility():
     def channels_pad_to_shape(arr, target, pad_value=0):
         
         channels_combined = []
+    
         # print(arr.shape)
         # quit()
         for channel in arr:
-        #   print(channel.shape)
-        #   print(target.shape)
-        #   quit()
-          row_diff = target.shape[0] - channel.shape[0]
+          
+          row_diff = target[0] - channel.shape[0]
         
         
-          column_diff = target.shape[1] - channel.shape[1]
-
+          column_diff = target[1] - channel.shape[1]
           pad_row = (row_diff // 2, row_diff // 2)
           if row_diff % 2 != 0:
               pad_row = (row_diff // 2 + 1, row_diff // 2)
@@ -159,7 +157,7 @@ class Utility():
         return np.sum(np.stack(channels_combined), axis=0)
     
 
-    def channels_pad_batch(samples, example, pad_value=0):
+    def channels_pad_batch(samples: ndarray, example: ndarray, axis: tuple, pad_value=0):
      
     #  samples = np.vstack(samples)
     #  example = np.vstack(example)
@@ -167,4 +165,4 @@ class Utility():
     #  print(example.shape)
     #  quit()
     # "Pad a list of arrays to the same shape (max of each dimension)."
-     return np.array([Utility.channels_pad_to_shape(s, example, pad_value) for s in samples])
+     return np.array([Utility.channels_pad_to_shape(s, (example.shape[axis[0]], example.shape[axis[1]]), pad_value) for s in samples])
