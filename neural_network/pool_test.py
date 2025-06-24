@@ -50,10 +50,10 @@ def rev_slide_loop(arrs, arr_axis,  windows, w_axis):
     # quit()
     print(arrs.shape)
     
-    target_shape_2d = (arrs.shape[-2] + windows.shape[-2] - 1, arrs.shape[-1] + windows.shape[-1] - 1)
+    target_shape = (arrs.shape[-2] + windows.shape[-2] - 1, arrs.shape[-1] + windows.shape[-1] - 1)
     target_array = np.zeros(arrs.shape)
-    target_idxs = list(np.ndindex(target_array.shape))
-    print(target_shape_2d)
+    target_idxs = list(np.ndindex(target_shape))
+    print(target_shape)
 
     arrs_idx = -1
     for  win_idx, window   in enumerate(windows):
@@ -66,7 +66,7 @@ def rev_slide_loop(arrs, arr_axis,  windows, w_axis):
             arrs_idx += 1
 
 
-        if arr_idx[0] + window.shape[0] <= target_shape_2d[0] and arr_idx[1] + window.shape[1] <= target_shape_2d[1]: 
+        if arr_idx[0] + window.shape[0] <= target_shape[0] and arr_idx[1] + window.shape[1] <= target_shape[1]: 
          
      
           print(f'arr_idx{arr_idx}')
