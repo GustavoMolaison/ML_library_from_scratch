@@ -166,3 +166,22 @@ class Utility():
     #  quit()
     # "Pad a list of arrays to the same shape (max of each dimension)."
      return np.array([Utility.channels_pad_to_shape(s, (example.shape[axis[0]], example.shape[axis[1]]), pad_value) for s in samples])
+    
+
+
+
+
+    class Agent:
+        def __init__(self):
+           super(self).__init__()
+
+        
+        def policy_loss(probs, action, reward):
+            prob = probs[action]
+            log_prob = np.log(prob)
+
+            onehot = np.zeros(probs)
+            onehot[action] = 1
+
+            grad = reward * (probs - onehot)
+            return -log_prob * reward, grad
