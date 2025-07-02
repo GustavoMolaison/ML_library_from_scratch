@@ -1,4 +1,4 @@
-from utils.hugo_utility import Utility as U
+from ..utils.hugo_utility import Utility as U
 import numpy as np
 
 
