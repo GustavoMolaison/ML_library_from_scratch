@@ -176,12 +176,29 @@ class Utility():
            super(self).__init__()
 
         
-        def policy_loss(probs, action, reward):
-            prob = probs[action]
-            log_prob = np.log(prob)
+        def policy_loss(probs, actions, reward):
+            probs = np.asarray(probs)
+            actions = [actions]
+            reward = np.asarray(reward)
 
-            onehot = np.zeros(probs)
-            onehot[action] = 1
+            print(f'probs: {probs}')
+            print(f'action: {actions}')
+            sample_prob = probs[np.arange(len(actions)), actions]
+            log_prob = np.log(sample_prob)
+           
+            onehot = np.zeros_like(probs)
+            onehot[np.arange(len(actions)), actions] = 1
 
             grad = reward * (probs - onehot)
-            return -log_prob * reward, grad
+            return  -log_prob * reward, grad
+        
+            # for prob, action in zip(probs, actions):
+            #   single_prob = probs[action]
+            #   log_prob = np.log(single_prob)
+            
+            
+            #   onehot = np.zeros(prob)
+            #   onehot[action] = 1
+
+            #   grad = reward * (prob - onehot)
+            #   return -log_prob * reward, grad

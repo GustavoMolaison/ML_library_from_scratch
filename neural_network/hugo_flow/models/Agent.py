@@ -57,9 +57,9 @@ class Hugo_Agent():
             
             
 
-    def backward(self, x, action, reward, training = True):
+    def backward(self, x, actions, reward, training = True):
        
-        loss, grad = self.loss_methods[self.mode](x, action, reward)
+        loss, grad = self.loss_methods[self.mode](x, actions, reward)
         if training == False:
             return loss
         grad = grad
@@ -73,10 +73,17 @@ class Hugo_Agent():
            
         return loss    
     
-    def forward(self, input, training = True):
+    def forward(self, input, training = True, read_class = False, agent_id = None):
            output = input
+           if read_class == True:
+               
+               if agent_id == None:
+                   raise("With 'read_class' mode on. You need to add agent_id to each data object passes")
+              
+               output = np.array([[log.get_data(agent_id) for log in sample] for sample in output])
+               output = output.reshape(output.shape[0], -1)
           #  import time
-          #  print(len(self.layers))
+           print(output.shape)
           #  quit()
            for layer in self.layers:
             #   print('Layer Done!')s
