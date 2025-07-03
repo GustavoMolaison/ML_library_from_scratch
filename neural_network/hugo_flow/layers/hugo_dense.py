@@ -9,7 +9,7 @@ import numpy as np
 class Dense_Layer():
         def __init__(self, model = None):
             self.model = model
-            self.activation_functions = {'none': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
+            self.activation_functions = {'linear': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
             self.loss_methods = {'mse': U.mse_loss, 'cross_entropy': U.cross_entropy_loss}
             self.update_methods = {'gradient descent': U.basic_grad_update, 'SGD': U.SGD_momentum}
             # self.loss = loss
@@ -72,7 +72,7 @@ class Dense_Layer():
            
             if self.model.dropout == True:
                 self.output = U.dropout(self.output)
-
+            
             return self.output
         
         # def forward_weight_gradient(self, input):

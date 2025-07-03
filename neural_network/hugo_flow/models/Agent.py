@@ -1,10 +1,10 @@
 import numpy as np
-from utils.hugo_utility import Utility as U 
+from ..utils.hugo_utility import Utility as U 
 np.set_printoptions(threshold=np.inf)
 
 
 class Hugo_Agent():
-    def __init__(self, loss, mode, weight_initialization = 'none', clip_method ='norm clipping', update_method = 'gradient descent', lr = 0.001, dropout = False, dropout_alpha = 0.5, max_grad = 1):
+    def __init__(self, mode, weight_initialization = 'none', clip_method ='norm clipping', update_method = 'gradient descent', lr = 0.001, dropout = False, dropout_alpha = 0.5, max_grad = 1):
         
         # Agent type (Policy Network,  Value Network, Q-Network)
         self.mode = mode
@@ -13,12 +13,12 @@ class Hugo_Agent():
         
         
         U.value_f(lr, dropout_alpha)
-        U.value_s(loss, weight_initialization)
+        U.value_s(mode, weight_initialization)
         U.value_b(dropout)
-        self.activation_functions = {'none': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
-        self.loss_methods = {'policy network': U.Agent.policy_grad}
+        self.activation_functions = {'linear': U.no_activation_function, 'sigmoid' : U.sigmoid, 'relu' : U.relu, 'leaky relu': U.leaky_relu, 'tanh': U.tanh}
+        self.loss_methods = {'policy network': U.Agent.policy_loss}
         self.clipping_methods = {'norm clipping': U.norm_clipping}
-        self.loss = loss
+        # self.loss = loss       replaced by mode for agents
         self.lr = lr
         self.weights_initializations = {'linear' : U.linear, 'he' : U.he, 'xavier': U.xavier}
         self.weights_initialization = weight_initialization
@@ -73,48 +73,54 @@ class Hugo_Agent():
            
         return loss    
     
-    def forward(self, input, training):
+    def forward(self, input, training = True):
            output = input
-           import time
+          #  import time
+          #  print(len(self.layers))
+          #  quit()
            for layer in self.layers:
-            #   print('Layer Done!')
+            #   print('Layer Done!')s
               # start = time.perf_counter()
               output = layer.forward_L(output, training)
+              # print(f'output: {output}')
+              
               # end = time.perf_counter()
             #   print(f"Execution time {layer}: {end - start:.4f} seconds")
            
            
+               
+          #  print(f'output final: {output}')
            return output     
     
 
-def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None, training = True):
-      loss_over_epochs_t = []
-      loss_over_epochs_v = [] 
-      import time
-      for i in range(epochs):
-        start = time.perf_counter()
-        print(f'EPOCH {i}')
-        output_t = model.forward(input = X_training, training = True)
-        loss_t = model.backward(output_t, Y_training, training = True)
-        loss_over_epochs_t.append(loss_t)
+    def run_model(self, env, epochs, X_training):
+         loss_over_epochs_t = []
+         loss_over_epochs_v = [] 
+         import time
+         for i in range(epochs):
+           start = time.perf_counter()
+           print(f'EPOCH {i}')
+           output_t = self.forward(input = X_training, training = True, env = env)
+           loss_t = self.backward(output_t, training = True)
+          #  loss_over_epochs_t.append(loss_t)
 
         # print(f'Output{output}')
-        if isinstance(X_val, np.ndarray):
-          output_v = model.forward(input = X_val, training = False)
-          loss_v = model.backward(output_v, Y_val, training = False)
-          loss_over_epochs_v.append(loss_v)
-        else:
-          loss_v = 0
-          loss_over_epochs_v = [0]
+          #  if isinstance(X_val, np.ndarray):
+            #  output_v = self.forward(input = X_val, training = False)
+            #  loss_v = self.backward(output_v, Y_val, training = False)
+            #  loss_over_epochs_v.append(loss_v)
+          #  else:
+            #  loss_v = 0
+            #  loss_over_epochs_v = [0]
   
-        print(f'training loss: {loss_t}\n')
-        print(f'VALIDATION loss: {loss_v}\n')
-        end = time.perf_counter()
-        print(f"Execution time of epoch: {end - start:.4f} seconds")
-      if isinstance(X_val, np.ndarray):
-        return loss_over_epochs_t, loss_over_epochs_v, output_t, output_v
-      else:   
-        return loss_over_epochs_t, output_t
+          #  print(f'training loss: {loss_t}\n')
+           print(f'VALID/ATION loss: {loss_v}\n')
+           end = time.perf_counter()
+           print(f"Execution time of epoch: {end - start:.4f} seconds")
+           if isinstance(X_val, np.ndarray):
+             return loss_over_epochs_t, loss_over_epochs_v, output_t, output_v
+           else:   
+             return loss_over_epochs_t, output_t
                
  
 
@@ -136,15 +142,15 @@ def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_upd
         model_nn.add_layer(layer_0, dense = 1) 
 
 
-class Hugo():
-    def __init__(self, loss, weight_initialization, dropout, lr, clip_method = 'norm clipping', update_method = 'gradient descent', max_grad = 1):
-        self.model = hugo_2_0(loss = loss, update_method= update_method, weight_initialization = weight_initialization, dropout = dropout, lr = lr, max_grad = max_grad)
+# class Hugo():
+#     def __init__(self, loss, weight_initialization, dropout, lr, clip_method = 'norm clipping', update_method = 'gradient descent', max_grad = 1):
+#         self.model = hugo_2_0(loss = loss, update_method= update_method, weight_initialization = weight_initialization, dropout = dropout, lr = lr, max_grad = max_grad)
 
     
         
-    def run(self, model_nn, epochs, X, Y, X_val = None, Y_val = None):
-        self.run_model = run_model(model_nn, epochs, X, Y, X_val = X_val, Y_val = Y_val)
-        return self.run_model
+#     def run(self, model_nn, epochs, X, Y, X_val = None, Y_val = None):
+#         self.run_model = run_model(model_nn, epochs, X, Y, X_val = X_val, Y_val = Y_val)
+#         return self.run_model
 
 
 
