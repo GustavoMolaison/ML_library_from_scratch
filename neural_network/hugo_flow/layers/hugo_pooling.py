@@ -1,5 +1,5 @@
 import numpy as np
-from utils.hugo_utility import Utility as U
+from ..utils.hugo_utility import Utility as U
 from numpy.lib.stride_tricks import sliding_window_view
 # UNDER DEVELOPMENT
 # UNDER DEVELOPMENT
@@ -18,8 +18,12 @@ class max_pool2d():
     def forward_L(self, input, training = True):
         print(f'input to pooled: {input.shape}')
         self.windows = sliding_window_view(input, self.pool_size, axis=(2, 3))
-
+        print(f'self.windows old: {self.windows.shape}')
+        self.windows = self.windows[:, :, :: self.pool_size[0], ::self.pool_size[1], ...]
+        print(f'self.windows: {self.windows.shape}')
         self.pooled = np.max(self.windows, axis = (-2, -1))
+        print(f'output of pooled: {self.pooled.shape}')
+        quit()
 
         return self.pooled
 
@@ -33,8 +37,8 @@ class max_pool2d():
         grad_pool = grad_mask.astype(float)
         
         grad_input = grad_pool * grad[..., None, None]
-        print(f'grad_input of pooled: {grad_input[0][0][0][0]}')
-        quit()
+        # print(f'grad_input of pooled: {grad_input[0][0][0][0]}')
+        # quit()
 
         return grad_input
 

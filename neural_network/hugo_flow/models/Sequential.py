@@ -1,5 +1,5 @@
 import numpy as np
-from utils.hugo_utility import Utility as U 
+from ..utils.hugo_utility import Utility as U 
 np.set_printoptions(threshold=np.inf)
 
 
@@ -111,7 +111,7 @@ def run_model(model, epochs, X_training, Y_training, X_val = None, Y_val = None,
                
  
 
-# SET UP LAYER FEATURE NEED CHANGE OUTDATED
+# SET UP LAYER FEATURE NEED CHANGE OUTDATED #########################################################
 def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_update_method: list,  model_nn, weight_initialization: list = [None, None, None]):
         
         from layers import hugo_dense as dense
@@ -127,12 +127,15 @@ def set_up_layers(X, Y, neurons_num, density, activation_functions: list, lr_upd
         layer_0 = dense(model = model_nn)
         layer_0.set_layer(input_features = 64, neurons_num = Y.shape[1], activation_function= activation_functions[2], weight_initialization = weight_initialization[2], update_method = lr_update_method[2])
         model_nn.add_layer(layer_0, dense = 1) 
+######################################################################################################:3
+
 
 # model_uno = hugo_2_0(loss = 'mse', weight_initialization= 'linear')
 # set_up_layers(X_training, Y_training, model_nn = model_uno,
 #                neurons_num = 64, density = 1,
 #                  activation_functions = ['leaky relu','leaky relu','sigmoid'], lr_update_method = ['Hugo_lr_bonus','Hugo_lr_bonus','Hugo_lr_bonus']
 #                  weight_innitialization= [None, None, 'xavier'] )
+
 class Hugo():
     def __init__(self, loss, weight_initialization, dropout, lr, clip_method = 'norm clipping', update_method = 'gradient descent', max_grad = 1):
         self.model = hugo_2_0(loss = loss, update_method= update_method, weight_initialization = weight_initialization, dropout = dropout, lr = lr, max_grad = max_grad)

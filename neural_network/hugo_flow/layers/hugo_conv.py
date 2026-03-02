@@ -2,7 +2,7 @@
 import numpy as np
 from numpy import ndarray
 from numpy.lib.stride_tricks import sliding_window_view
-from utils.hugo_utility import Utility as U 
+from ..utils.hugo_utility import Utility as U 
 import time
 
 class Conv_layer():
@@ -114,6 +114,8 @@ class Conv_layer():
             input_grad: Gradient w.r.t input for previous layer or 0 if input layer.
         """
         # Element-wise multiply grad with activation function gradient
+        print(grad.shape)
+        print(self.af_gradient.shape)
         grad = np.reshape(np.reshape(grad, (grad.shape[0], -1)) * self.af_gradient, grad.shape)
 
         if self.sequential:
@@ -229,6 +231,8 @@ def conv_ld(inp: ndarray, params: ndarray, bias: ndarray, filters_amount: int = 
         for idx, param in enumerate(params):
             # Pad input per filter size
             input_pad = input_pad_calc(output, params[0])
+            print(f'input_pad shape: {input_pad.shape}')
+            quit()
             # Extract sliding window patches from input
             patches = sliding_window_view(input_pad, params[0].shape, axis=(1, 2))
             patches = np.reshape(patches, (patches.size // params[0].size, params[0].size))
@@ -245,7 +249,10 @@ def conv_ld(inp: ndarray, params: ndarray, bias: ndarray, filters_amount: int = 
     else:
         for idx, param in enumerate(params):
             # Pad input per filter size
-            input_pad = input_pad_calc(inp, params[0])
+            input_pad, xd = input_pad_calc(inp, params[0])
+            print(f'input_pad shape: {input_pad.shape}')
+            print(f'input_pad shape: {xd.shape}')
+            quit()
             # Extract sliding window patches from input
             patches = sliding_window_view(input_pad, params[0].shape, axis=(1, 2))
             patches = np.reshape(patches, (patches.size // params[0].size, params[0].size))
@@ -308,7 +315,34 @@ def input_pad_calc(inp: ndarray, param: ndarray, jump: int = 0) -> ndarray:
     
     padded_batch = U.channels_pad_batch(samples=samples, example=channels_combined[0], axis = (0, 1))
 
-    return padded_batch
+    # return padded_batch
+    """
+    Automatycznie oblicza i dodaje padding 'SAME' dla całego batcha.
+    inp shape: (N, C, H, W)
+    kernel_size: (k_h, k_w)
+    """
+    k_h, k_w = param.shape
+    
+    # Obliczamy ile paddingu potrzeba (wzór na 'Same' padding)
+    # Używamy max(0, ...), żeby nie wyjść na minus przy kernelu 1x1
+    pad_h = max((k_h - 1) // 2, 0)
+    pad_w = max((k_w - 1) // 2, 0)
+    
+    # Obsługa parzystych kerneli (rzadkie, ale trzeba uważać):
+    # Jeśli kernel jest parzysty (np. 4), (4-1)//2 = 1. Brakuje jednego piksela.
+    # Wtedy dodajemy go na koniec: (pad_top, pad_bottom + reszta)
+    pad_h_extra = (k_h - 1) % 2
+    pad_w_extra = (k_w - 1) % 2
+
+    # Konfiguracja paddingu: ((0,0), (0,0), (top, bot), (left, right))
+    padding_config = (
+        (0, 0), 
+        (0, 0),
+        (pad_h, pad_h + pad_h_extra),
+        (pad_w, pad_w + pad_w_extra)
+    )
+    print(inp.shape)
+    return np.pad(inp, padding_config, mode='constant', constant_values=0), padded_batch
 
    
 

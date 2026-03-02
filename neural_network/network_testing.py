@@ -1,9 +1,9 @@
-from layers.hugo_dense import Dense_Layer
-from models.Sequential import Hugo
-from layers.hugo_conv import Conv_layer
-from layers.hugo_pooling import max_pool2d
+from hugo_flow.layers.hugo_dense import Dense_Layer
+from hugo_flow.models.Sequential import Hugo
+from hugo_flow.layers.hugo_conv import Conv_layer
+from hugo_flow.layers.hugo_pooling import max_pool2d
 import numpy as np
-from utils.hugo_utility import Utility as U
+from hugo_flow.utils.hugo_utility import Utility as U
 # import matplotlib.pyplot as plt
 
 import os
@@ -97,7 +97,7 @@ layer_D.set_layer(neurons_num=64, activation_function = 'tanh', weight_initializ
 hugo.model.add_layer(layer = layer_D, dense = 1)
 
 layer_O = Dense_Layer(model = hugo.model)
-layer_O.set_layer(neurons_num = 10, activation_function = 'none', weight_initialization= 'he')
+layer_O.set_layer(neurons_num = 10, activation_function = 'linear', weight_initialization= 'he')
 hugo.model.add_layer(layer = layer_O, dense = 1)
 
 # hugo.set_layers(X = X_training, Y = Y_training,  model_nn = hugo.model,
