@@ -1,0 +1,21 @@
+hugo_flow - contains all the files
+
+layers - contains all implemented layers:
+  Dense layer
+  convolutional layer
+  In development pooling layer
+  Syntax:
+     var = {layerType()}
+     var.set_layers(x, ...) -> allows tu customize layer parameters
+
+
+models - contains all the model setups
+  Seqential
+  Agent
+  Syntax:
+    var = {ModelType()} -> parameters are set up durning creation
+    var.add_layer() -> adds chosen layer to model, allows to add more than one using one call
+    var.run() -> runs forward and backward function with given data
+
+
+utils - contains neccesary fuctions used in the project
