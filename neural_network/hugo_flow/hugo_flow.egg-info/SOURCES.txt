@@ -5,9 +5,11 @@ hugo_flow.egg-info/dependency_links.txt
 hugo_flow.egg-info/top_level.txt
 layers/__init__.py
 layers/hugo_conv.py
+layers/hugo_conv_upgr.py
 layers/hugo_dense.py
 layers/hugo_pooling.py
 models/Agent.py
+models/RandomForest.py
 models/Sequential.py
 models/__init__.py
 utils/__init__.py

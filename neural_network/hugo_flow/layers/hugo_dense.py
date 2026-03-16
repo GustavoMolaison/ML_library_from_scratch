@@ -66,29 +66,29 @@ class Dense_Layer():
                 print('Dead neurons appeared')
                
             if training == True:
-              self.output, self.weight_gradient  = U.dot_calc(input, self.layer_weights)
-              self.output, self.bias_gradient  = U.bias_calc(self.output, self.layer_bias)
-              self.output, self.af_gradient = self.layer_af_calc(self.output)
+              self.output, self.weight_derivative  = U.dot_calc(input, self.layer_weights)
+              self.output, self.bias_derivative  = U.bias_calc(self.output, self.layer_bias)
+              self.output, self.af_derivative = self.layer_af_calc(self.output)
            
             if self.model.dropout == True:
                 self.output = U.dropout(self.output)
             
             return self.output
         
-        # def forward_weight_gradient(self, input):
+        # def forward_weight_derivative(self, input):
             
-        #     self.weight_gradient = input
-        #     return self.weight_gradient
+        #     self.weight_derivative = input
+        #     return self.weight_derivative
         
         
         def backward_L(self, grad):
             # print(f'grad: {grad.shape}')
-            # print(f'self.weight_gradient: {self.weight_gradient.shape}')
+            # print(f'self.weight_derivative: {self.weight_derivative.shape}')
             # print(f'self.layer_weights: {self.layer_weights.shape}')
-            grad = grad * self.af_gradient
+            grad = grad * self.af_derivative
             
-            layer_weight_grad = np.dot(self.weight_gradient.T, grad) 
-            layer_bias_grad = np.sum(grad * self.bias_gradient, axis = 0)   
+            layer_weight_grad = np.dot(self.weight_derivative.T, grad) 
+            layer_bias_grad = np.sum(grad * self.bias_derivative, axis = 0)   
             layer_input_grad = np.dot(grad, self.layer_weights.T) 
             
             #  gradient is how current layer affects loss, if we multiply it by weights we get how previous layer affected the loss cause input is multiplied by weights
