@@ -2,6 +2,7 @@ import numpy as np
 from ..utils.hugo_utility import Utility as U 
 np.set_printoptions(threshold=np.inf)
 
+# Framework for agents. With forward and backward methods. Also with method for running whole model on environment.
 
 class Hugo_Agent():
     def __init__(self, mode, weight_initialization = 'none', clip_method ='norm clipping', update_method = 'gradient descent', lr = 0.001, dropout = False, dropout_alpha = 0.5, max_grad = 1):
@@ -113,15 +114,15 @@ class Hugo_Agent():
 
         # print(f'Output{output}')
           #  if isinstance(X_val, np.ndarray):
-            #  output_v = self.forward(input = X_val, training = False)
-            #  loss_v = self.backward(output_v, Y_val, training = False)
-            #  loss_over_epochs_v.append(loss_v)
+          #    output_v = self.forward(input = X_val, training = False)
+          #    loss_v = self.backward(output_v, Y_val, training = False)
+          #    loss_over_epochs_v.append(loss_v)
           #  else:
             #  loss_v = 0
             #  loss_over_epochs_v = [0]
   
           #  print(f'training loss: {loss_t}\n')
-           print(f'VALID/ATION loss: {loss_v}\n')
+          #  print(f'VALID/ATION loss: {loss_v}\n')
            end = time.perf_counter()
            print(f"Execution time of epoch: {end - start:.4f} seconds")
            if isinstance(X_val, np.ndarray):
